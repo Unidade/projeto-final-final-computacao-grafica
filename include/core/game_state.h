@@ -1,6 +1,7 @@
 // core/game_state.h
 #pragma once
 #include "core/game_enums.h"
+#include "core/light_system.h"
 #include <GL/glew.h>
 
 struct PlayerState
@@ -11,6 +12,12 @@ struct PlayerState
 
     int currentAmmo = 12;
     int reserveAmmo = 25;
+
+    // --- Doom-Light ---
+    float batteryCharge       = 100.0f; // 0-100
+    float batteryDrainRate    = 8.0f;   // unidades/s quando ligada
+    float batteryRechargeRate = 3.0f;   // unidades/s quando desligada
+    float darknessDamageTimer = 0.0f;   // acumulador de intervalo de dano
 };
 
 struct WeaponAnim
@@ -44,6 +51,8 @@ struct GameContext
     float time = 0.0f;
 
     bool flashlightOn = true;
+
+    LightSystem lightSystem; // ciclo ON→FLICKER→OFF
 
     RenderAssets r;
 };

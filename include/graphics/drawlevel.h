@@ -3,6 +3,7 @@
 
 #include "level/maploader.h"
 #include "core/entities.h"
+#include "core/lightpost.h"
 #include <vector>
 
 struct RenderAssets; // forward decl (vem de core/game_state.h)
@@ -13,4 +14,10 @@ void drawEntities(const std::vector<Enemy> &enemies,
                   const std::vector<Item> &items,
                   float camX, float camZ, float dx, float dz,
                   const RenderAssets &r);
+
+void drawLightPosts(const std::vector<LightPost>& posts,
+                    float camX, float camZ, float dx, float dz);
+
+void setPostLightEachFrame(float postX, float postZ, float intensity, bool enabled);
+
 #endif

@@ -1,5 +1,6 @@
 #include "level/level.h"
-#include "core/config.h" 
+#include "core/config.h"
+#include "core/lightpost.h"
 #include <cstdio>
 
 // Configurações básicas para spawn
@@ -19,6 +20,7 @@ bool loadLevel(Level &lvl, const char *mapPath, float tileSize)
     // Limpa entidades antigas se houver
     lvl.enemies.clear();
     lvl.items.clear();
+    lvl.posts.clear();
 
     // 2. Escaneia o mapa procurando Entidades (E, H, etc)
     // Precisamos acessar os dados brutos do MapLoader como referência mudável
@@ -94,6 +96,15 @@ bool loadLevel(Level &lvl, const char *mapPath, float tileSize)
                 i.type = ITEM_AMMO;
                 i.active = true;
                 lvl.items.push_back(i);
+            }
+            else if (c == 'P') // Poste de Luz
+            {
+                LightPost lp;
+                lp.x = wx;
+                lp.z = wz;
+                lp.active    = true;
+                lp.intensity = 1.0f;
+                lvl.posts.push_back(lp);
             }
         }
     }

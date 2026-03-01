@@ -388,7 +388,7 @@ void drawLevel(const MapLoader &map, float px, float pz, float dx, float dz, con
 
             bool isEntity = (c == 'J' || c == 'T' || c == 'M' || c == 'K' ||
                              c == 'G' || c == 'H' || c == 'A' || c == 'E' ||
-                             c == 'F' || c == 'I');
+                             c == 'F' || c == 'I' || c == 'P');
 
             if (isEntity)
             {
@@ -545,4 +545,80 @@ void drawEntities(const std::vector<Enemy> &enemies, const std::vector<Item> &it
 
     glEnable(GL_LIGHTING);
     glDisable(GL_ALPHA_TEST);
+}
+
+// ---------------------------------------------------------------------------
+// Desenha postes de luz como pilar + esfera no topo
+// ---------------------------------------------------------------------------
+void drawLightPosts(const std::vector<LightPost>& posts,
+                    float camX, float camZ, float dx, float dz)
+{
+    float fwdx, fwdz;
+    bool hasFwd = getForwardXZ(dx, dz, fwdx, fwdz);
+
+    glDisable(GL_TEXTURE_2D);
+
+    for (const auto& p : posts)
+    {
+        if (!isVisibleXZ(p.x, p.z, camX, camZ, hasFwd, fwdx, fwdz))
+            continue;
+
+        glPushMatrix();
+        glTranslatef(p.x, 0.0f, p.z);
+
+        // --- Pilar ---
+        if (p.active && p.intensity > 0.05f) {
+            float v = 0.55f + 0.35f * p.intensity;
+            glColor3f(v * 0.6f, v * 0.55f, v * 0.2f); // amarelo-ferrugem
+        } else {
+            glColor3f(0.18f, 0.18f, 0.18f);
+        }
+        glPushMatrix();
+        glTranslatef(0.0f, 1.5f, 0.0f);
+        glScalef(0.12f, 3.0f, 0.12f);
+        glutSolidCube(1.0f);
+        glPopMatrix();
+
+        // --- Luminaria no topo ---
+        if (p.active && p.intensity > 0.05f) {
+            float v = p.intensity;
+            glColor3f(1.0f * v, 0.95f * v, 0.6f * v);
+        } else {
+            glColor3f(0.08f, 0.08f, 0.08f);
+        }
+        glPushMatrix();
+        glTranslatef(0.0f, 3.15f, 0.0f);
+        glutSolidSphere(0.28f, 10, 10);
+        glPopMatrix();
+
+        glPopMatrix();
+    }
+
+    glEnable(GL_TEXTURE_2D);
+    glColor3f(1.0f, 1.0f, 1.0f);
+}
+
+// ---------------------------------------------------------------------------
+// Configura GL_LIGHT3 com o poste ativo mais próximo
+// ---------------------------------------------------------------------------
+void setPostLightEachFrame(float postX, float postZ, float intensity, bool enabled)
+{
+    if (!enabled || intensity < 0.01f)
+    {
+        glDisable(GL_LIGHT3);
+        return;
+    }
+
+    glEnable(GL_LIGHT3);
+
+    GLfloat pos[]  = { postX, 3.0f, postZ, 1.0f }; // topo do poste
+    GLfloat diff[] = { 1.6f * intensity, 1.4f * intensity, 0.7f * intensity, 1.0f };
+    GLfloat amb[]  = { 0.35f * intensity, 0.30f * intensity, 0.12f * intensity, 1.0f };
+
+    glLightfv(GL_LIGHT3, GL_POSITION, pos);
+    glLightfv(GL_LIGHT3, GL_DIFFUSE,  diff);
+    glLightfv(GL_LIGHT3, GL_AMBIENT,  amb);
+    glLightf(GL_LIGHT3, GL_CONSTANT_ATTENUATION,  0.5f);
+    glLightf(GL_LIGHT3, GL_LINEAR_ATTENUATION,    0.12f);
+    glLightf(GL_LIGHT3, GL_QUADRATIC_ATTENUATION, 0.04f);
 }

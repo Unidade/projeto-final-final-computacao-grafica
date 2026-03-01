@@ -1,9 +1,12 @@
 # ✅ Checklist Técnico: Doom-Light
 
-Transformação do DoomLike FPS → Jogo de Terror de Luzes ("Pique-esconde com a escuridão").
+Transformação do DoomLike FPS → Jogo de Terror de Luzes. **Inimigos, arma e texturas são mantidos** — serão expandidos em paralelo depois.
 
 > [!IMPORTANT]
 > Cada task é a **menor unidade atômica** possível. Siga na ordem exata para não quebrar o código funcional.
+
+> [!NOTE]
+> As fases de limpeza (remover inimigos/arma) foram **deliberadamente omitidas**. Foco 100% nas novas mecânicas de luz.
 
 ---
 
@@ -11,7 +14,7 @@ Transformação do DoomLike FPS → Jogo de Terror de Luzes ("Pique-esconde com 
 
 | Componente | Arquivo Principal | Papel |
 |---|---|---|
-| Map Parser | [maploader.cpp](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/level/maploader.cpp) | Lê [.txt](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/maps/map1.txt), detecta `9` (spawn) |
+| Map Parser | [maploader.cpp](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/level/maploader.cpp) | Lê [.txt](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/maps/map2.txt), detecta `9` (spawn) |
 | Entity Spawn | [level.cpp](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/level/level.cpp) | Spawna Enemy/Item por char (`J,T,M,K,G,H,A`) |
 | Entity Update | [entities.cpp](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/core/entities.cpp) | IA inimigos + pickup itens |
 | Rendering | [drawlevel.cpp](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/graphics/drawlevel.cpp) | Tiles + sprites de entidades |
@@ -39,54 +42,45 @@ Transformação do DoomLike FPS → Jogo de Terror de Luzes ("Pique-esconde com 
 
 ---
 
-## 🛠️ Fase 1: Limpeza — Remover Combate
+## 🛠️ Fase 1: Preparação — Adicionar Char `P` ao Sistema
 
-**Meta**: Jogo compila e roda sem armas/inimigos, mantendo movimentação e mapa intactos.
+**Meta**: Estrutura de dados para postes pronta. Mapa tem tiles `P`. Código atual continua 100% funcional (inimigos e arma intactos).
 
-### 1.1 — Neutralizar Spawn de Inimigos
+### 1.1 — Definir Struct LightPost
 
-- [ ] **1.1.1** Em [level.cpp](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/level/level.cpp) L49-L75: Comentar/remover o bloco `if (enemyType != -1)` que faz `lvl.enemies.push_back(e)`.
-- [ ] **1.1.2** Em [level.cpp](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/level/level.cpp) L48: Comentar/remover as linhas de detecção `if (c == 'J') enemyType = 0; ... if (c == 'K') enemyType = 4;`.
-- [ ] **1.1.3** Compilar e confirmar: jogo abre sem crash, mapa renderiza sem sprites de inimigos.
+- [ ] **1.1.1** Criar novo header [include/core/lightpost.h](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/include/core/lightpost.h):
+```cpp
+#pragma once
+struct LightPost {
+    float x, z;       // Posição mundo (centro do tile)
+    bool active;       // Se está aceso agora
+    float intensity;   // 0.0 = apagado, 1.0 = máximo
+};
+```
 
-### 1.2 — Neutralizar Spawn de Munição
+### 1.2 — Adicionar `P` ao Level (dados)
 
-- [ ] **1.2.1** Em [level.cpp](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/level/level.cpp) L89-L97: Comentar/remover o bloco `else if (c == 'A')` que cria `ITEM_AMMO`.
-- [ ] **1.2.2** Compilar e confirmar: nenhum item de munição aparece no mapa.
+- [ ] **1.2.1** Em [level.h](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/include/level/level.h): Adicionar `#include "core/lightpost.h"` e `std::vector<LightPost> posts;` na struct [Level](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/include/level/level.h#7-14).
+- [ ] **1.2.2** Em [level.cpp](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/level/level.cpp): Adicionar `lvl.posts.clear();` no início de [loadLevel()](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/include/level/level.h#15-16) junto com `enemies.clear()`.
+- [ ] **1.2.3** Em [level.cpp](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/level/level.cpp): No loop de scan do mapa, adicionar tratamento do char `P`:
+```cpp
+else if (c == 'P') {
+    LightPost lp;
+    lp.x = wx; lp.z = wz;
+    lp.active = true; lp.intensity = 1.0f;
+    lvl.posts.push_back(lp);
+}
+```
+- [ ] **1.2.4** Em [entities.cpp](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/core/entities.cpp) [isWalkable()](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/core/entities.cpp#7-27) L22: Adicionar `if (c == 'P') return true;` para que o poste seja caminhável.
+- [ ] **1.2.5** Em [drawlevel.cpp](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/graphics/drawlevel.cpp) L389: Na condição `isEntity`, adicionar `|| c == 'P'` para que o tile de chão seja desenhado sob o poste.
 
-### 1.3 — Desligar IA de Inimigos
+### 1.3 — Adicionar `P` ao Mapa
 
-- [ ] **1.3.1** Em [entities.cpp](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/core/entities.cpp) L34: No [updateEntities()](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/core/entities.cpp#28-141), envolver o loop `for (auto& en : lvl.enemies)` num `if (!lvl.enemies.empty())` guard ou simplesmente comentar todo o bloco (linhas 34-117).
-- [ ] **1.3.2** Compilar e confirmar: sem crashes por vetor vazio.
-
-### 1.4 — Desligar Renderização de Inimigos/Itens de Munição
-
-- [ ] **1.4.1** Em [drawlevel.cpp](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/graphics/drawlevel.cpp) L524-L544: No [drawEntities()](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/graphics/drawlevel.cpp#495-549), comentar o bloco inteiro de `// --- INIMIGOS ---` (loop de enemies).
-- [ ] **1.4.2** Em [drawlevel.cpp](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/graphics/drawlevel.cpp) L520-L521: No [drawEntities()](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/graphics/drawlevel.cpp#495-549), dentro do loop de itens, comentar o `else if (item.type == ITEM_AMMO)` para não renderizar munição.
-- [ ] **1.4.3** Compilar e testar: mapa renderiza limpo, sem sprites de inimigos nem munição.
-
-### 1.5 — Desligar Arma do Jogador
-
-- [ ] **1.5.1** Em [game.cpp](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/core/game.cpp) L202: Comentar a chamada `updateWeaponAnim(dt)` em [gameUpdate()](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/core/game.cpp#163-211).
-- [ ] **1.5.2** Em [game.cpp](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/core/game.cpp) L236: No [drawWorld3D()](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/core/game.cpp#212-238), verificar se [drawEntities()](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/graphics/drawlevel.cpp#495-549) ainda funciona sem enemies (vetor vazio → OK, loop não executa).
-- [ ] **1.5.3** Localizar onde `playerTryAttack()` é chamada (provavelmente em [input.cpp](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/input/input.cpp) ou no handler de input) e comentar a chamada.
-- [ ] **1.5.4** Localizar onde `playerTryReload()` é chamada e comentar.
-- [ ] **1.5.5** No HUD: em [gameRender()](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/core/game.cpp#239-298) L290, mudar `hudRenderAll(... true, true, true)` para `hudRenderAll(... true, false, true)` — o `showWeapon=false` esconde a arma na tela.
-- [ ] **1.5.6** Compilar e testar: HUD mostra HP mas não mostra arma, clicks não fazem nada.
-
-### 1.6 — Limpar Ammo do PlayerState
-
-- [ ] **1.6.1** Em [game_state.h](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/include/core/game_state.h) L12-L13: Comentar `currentAmmo` e `reserveAmmo` do `PlayerState` (ou manter mas ignorar).
-  - **Alternativa segura**: Apenas ignorar na UI — não precisamos deletar campos por enquanto para evitar erros de compilação em cascata.
-- [ ] **1.6.2** No HUD, zerar a exibição de munição: ajustar `hs.currentAmmo = 0; hs.reserveAmmo = 0;` em [game.cpp](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/core/game.cpp) na montagem do `HudState`.
-
-### 1.7 — Limpar Referências de Áudio de Inimigos
-
-- [ ] **1.7.1** Em [game.cpp](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/core/game.cpp) L143: Verificar se `audioInit(gAudioSys, gLevel)` crashia sem inimigos. Se sim, guardar os áudios de inimigos numa condição.
-- [ ] **1.7.2** Em [entities.cpp](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/core/entities.cpp) L108: A chamada `audioPlayHurt(audio)` ficou inerte (bloco de ataque comentado). Confirmar.
+- [ ] **1.3.1** Editar [maps/map1.txt](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/maps/map1.txt): Substituir alguns tiles `0` ou `3` por `P` em 4-6 posições estratégicas (corredores, interseções).
+- [ ] **1.3.2** Compilar e testar: jogo roda normalmente, `lvl.posts.size() > 0` via printf/debug.
 
 ### ✅ Marco Fase 1
-> Jogo roda com mapa completo, jogador se move, lanterna funciona, mas **sem inimigos, armas ou munição**.
+> Estrutura `LightPost` existe. Mapa tem tiles `P`. Inimigos, arma e IA **inalterados**.
 
 ---
 
@@ -133,7 +127,7 @@ else if (c == 'P') {
 
 - [ ] **2.4.1** Em [entities.cpp](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/core/entities.cpp) [isWalkable()](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/core/entities.cpp#7-27) L22: Adicionar `if (c == 'P') return true;` (ou adaptar a lógica para que `P` não bloqueie).
 - [ ] **2.4.2** Em [drawlevel.cpp](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/graphics/drawlevel.cpp) L389-L391: Adicionar `'P'` à lista de `isEntity` para que o tile de chão seja desenhado sob o poste.
-- [ ] **2.4.3** No [drawLevel()](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/include/graphics/drawlevel.h#10-11) L389: A condição `isEntity` já trata esses tiles como chão. Adicionar `|| c == 'P'` nessa condição.
+- [ ] **2.4.3** No [drawLevel()](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/graphics/drawlevel.cpp#366-453) L389: A condição `isEntity` já trata esses tiles como chão. Adicionar `|| c == 'P'` nessa condição.
 - [ ] **2.4.4** Compilar e testar: jogador pode caminhar em tiles `P`, chão renderiza.
 
 ### 2.5 — Desenhar Visual do Poste (Placeholder)
@@ -186,7 +180,7 @@ void drawLightPosts(const std::vector<LightPost>& posts,
     }
 }
 ```
-- [ ] **2.5.3** Em [game.cpp](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/core/game.cpp) [drawWorld3D()](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/core/game.cpp#212-238): Adicionar `drawLightPosts(gLevel.posts, camX, camZ, dirX, dirZ);` após [drawLevel()](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/include/graphics/drawlevel.h#10-11).
+- [ ] **2.5.3** Em [game.cpp](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/core/game.cpp) [drawWorld3D()](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/core/game.cpp#212-238): Adicionar `drawLightPosts(gLevel.posts, camX, camZ, dirX, dirZ);` após [drawLevel()](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/graphics/drawlevel.cpp#366-453).
 - [ ] **2.5.4** Incluir `"core/lightpost.h"` e `<vector>` onde necessário no [drawlevel.cpp](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/graphics/drawlevel.cpp).
 - [ ] **2.5.5** Compilar e testar: postes visíveis como pilares no mapa.
 
@@ -325,13 +319,13 @@ void setPostLightEachFrame(float postX, float postZ, float intensity, bool enabl
 ```
 - [ ] **3.5.3** Em [lighting.cpp](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/graphics/lighting.cpp): Adicionar `setupPostLightOnce()` (setup do GL_LIGHT3 no init).
 - [ ] **3.5.4** Em [game.cpp](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/core/game.cpp) [gameInit()](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/core/game.cpp#70-145): Chamar `setupPostLightOnce()` após [setupFlashlightOnce()](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/graphics/lighting.cpp#39-58).
-- [ ] **3.5.5** Em [drawWorld3D()](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/core/game.cpp#212-238) ou no [drawLevel()](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/include/graphics/drawlevel.h#10-11): Para cada frame, encontrar o **poste ativo mais próximo** do jogador e chamar `setPostLightEachFrame(post.x, post.z, post.intensity, post.active)`.
+- [ ] **3.5.5** Em [drawWorld3D()](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/core/game.cpp#212-238) ou no [drawLevel()](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/graphics/drawlevel.cpp#366-453): Para cada frame, encontrar o **poste ativo mais próximo** do jogador e chamar `setPostLightEachFrame(post.x, post.z, post.intensity, post.active)`.
   - **Nota**: OpenGL fixed pipeline suporta apenas ~8 luzes. Usar apenas o poste mais próximo em GL_LIGHT3 é suficiente.
 - [ ] **3.5.6** Compilar e testar: quando luzes ON, área ao redor dos postes fica iluminada. Quando OFF, escuridão total (apenas lanterna).
 
 ### 3.6 — Escurecer Ambiente Global durante OFF
 
-- [ ] **3.6.1** Em [drawWorld3D()](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/core/game.cpp#212-238) em [game.cpp](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/core/game.cpp): Antes de [drawLevel()](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/include/graphics/drawlevel.h#10-11), conforme o `LightCycleState`:
+- [ ] **3.6.1** Em [drawWorld3D()](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/core/game.cpp#212-238) em [game.cpp](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/core/game.cpp): Antes de [drawLevel()](file:///c:/Users/rayan/projeto-final-final-computacao-grafica/src/graphics/drawlevel.cpp#366-453), conforme o `LightCycleState`:
   - `ON`: Ambient global normal (`0.045f`).
   - `FLICKER`: Ambient reduzido (`0.02f`).
   - `OFF`: Ambient quase zero (`0.005f`) — escuridão quase total.

@@ -2,6 +2,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <cfloat>
 
 #include "core/game_enums.h"
 #include "core/game_state.h"
@@ -9,6 +10,7 @@
 #include "core/game.h"
 
 #include "level/level.h"
+#include "core/light_system.h"
 
 #include "core/camera.h"
 #include "input/input.h"
@@ -64,7 +66,11 @@ void gameTogglePause()
 
 void gameToggleFlashlight()
 {
-    g.flashlightOn = !g.flashlightOn;
+    // Só permite ligar se tiver bateria suficiente
+    if (!g.flashlightOn && g.player.batteryCharge > 5.0f)
+        g.flashlightOn = true;
+    else if (g.flashlightOn)
+        g.flashlightOn = false;
 }
 
 // --- INIT ---
@@ -78,6 +84,16 @@ bool gameInit(const char *mapPath)
     setupSunLightOnce();
     setupIndoorLightOnce();
     setupFlashlightOnce();
+
+    // Inicializa GL_LIGHT3 (postes de luz)
+    glEnable(GL_LIGHT3);
+    GLfloat zero4[] = {0.0f, 0.0f, 0.0f, 1.0f};
+    glLightfv(GL_LIGHT3, GL_DIFFUSE, zero4);
+    glLightfv(GL_LIGHT3, GL_AMBIENT, zero4);
+    glLightf(GL_LIGHT3, GL_CONSTANT_ATTENUATION,  1.0f);
+    glLightf(GL_LIGHT3, GL_LINEAR_ATTENUATION,    0.0f);
+    glLightf(GL_LIGHT3, GL_QUADRATIC_ATTENUATION, 0.0f);
+    glDisable(GL_LIGHT3);
 
     if (!loadAssets(gAssets))
         return false;
@@ -150,12 +166,18 @@ void gameReset()
     g.player.currentAmmo = 12;
     g.player.reserveAmmo = 25;
 
-    g.player.damageAlpha = 0.0f;
-    g.player.healthAlpha = 0.0f;
+    g.player.damageAlpha        = 0.0f;
+    g.player.healthAlpha        = 0.0f;
+    g.player.batteryCharge      = 100.0f;
+    g.player.darknessDamageTimer= 0.0f;
 
     g.weapon.state = WeaponState::W_IDLE;
     g.weapon.timer = 0.0f;
     g.flashlightOn = true;
+
+    g.lightSystem.state = LightCycleState::ON;
+    g.lightSystem.timer = 0.0f;
+
     // Respawna o jogador
     applySpawn(gLevel, camX, camZ);
 }
@@ -201,6 +223,50 @@ void gameUpdate(float dt)
     updateEntities(dt);
     updateWeaponAnim(dt);
 
+    // --- DOOM-LIGHT: ciclo de luzes ---
+    lightSystemUpdate(g.lightSystem, gLevel.posts, dt);
+
+    // --- DOOM-LIGHT: bateria da lanterna ---
+    if (g.flashlightOn)
+    {
+        g.player.batteryCharge -= g.player.batteryDrainRate * dt;
+        if (g.player.batteryCharge <= 0.0f)
+        {
+            g.player.batteryCharge = 0.0f;
+            g.flashlightOn = false; // apaga automaticamente
+        }
+    }
+    else
+    {
+        g.player.batteryCharge += g.player.batteryRechargeRate * dt;
+        if (g.player.batteryCharge > 100.0f) g.player.batteryCharge = 100.0f;
+    }
+
+    // --- DOOM-LIGHT: dano por escuridão ---
+    // Jogador é protegido se estiver perto de um poste aceso OU com lanterna ligada
+    static const float SAFE_ZONE_RADIUS   = 8.0f;  // unidades mundo
+    static const float DARKNESS_DPS       = 6.0f;  // dano por segundo
+    static const float DAMAGE_INTERVAL    = 0.6f;  // pulso de dano (s)
+
+    bool nearPost       = playerIsInSafeZone(gLevel.posts, camX, camZ, SAFE_ZONE_RADIUS);
+    bool flashProtects  = g.flashlightOn && g.player.batteryCharge > 0.0f;
+
+    if (!nearPost && !flashProtects)
+    {
+        g.player.darknessDamageTimer += dt;
+        if (g.player.darknessDamageTimer >= DAMAGE_INTERVAL)
+        {
+            int dmg = (int)(DARKNESS_DPS * DAMAGE_INTERVAL);
+            g.player.health     -= dmg;
+            g.player.damageAlpha = 0.55f;
+            g.player.darknessDamageTimer = 0.0f;
+        }
+    }
+    else
+    {
+        g.player.darknessDamageTimer = 0.0f;
+    }
+
     // 3. CHECAGEM DE GAME OVER
     if (g.player.health <= 0)
     {
@@ -231,9 +297,42 @@ void drawWorld3D()
     // Desenha o cenário
     setSunDirectionEachFrame();
     setFlashlightEachFrame(camX, camY, camZ, dirX, dirY, dirZ, g.flashlightOn);
+
+    // --- Luz do poste mais próximo ---
+    {
+        float bestDist = FLT_MAX;
+        const LightPost* best = nullptr;
+        for (const auto& p : gLevel.posts) {
+            if (!p.active || p.intensity < 0.05f) continue;
+            float ddx = camX - p.x, ddz = camZ - p.z;
+            float d = sqrtf(ddx*ddx + ddz*ddz);
+            if (d < bestDist) { bestDist = d; best = &p; }
+        }
+        if (best)
+            setPostLightEachFrame(best->x, best->z, best->intensity, best->active);
+        else
+            setPostLightEachFrame(0, 0, 0, false);
+    }
+
+    // Ajuste ambient global conforme estado das luzes
+    {
+        LightCycleState ls = lightSystemGetState(g.lightSystem);
+        if (ls == LightCycleState::ON) {
+            GLfloat amb[] = {0.045f, 0.045f, 0.06f, 1.0f};
+            glLightModelfv(GL_LIGHT_MODEL_AMBIENT, amb);
+        } else if (ls == LightCycleState::FLICKER) {
+            GLfloat amb[] = {0.02f, 0.02f, 0.03f, 1.0f};
+            glLightModelfv(GL_LIGHT_MODEL_AMBIENT, amb);
+        } else { // OFF
+            GLfloat amb[] = {0.005f, 0.005f, 0.008f, 1.0f};
+            glLightModelfv(GL_LIGHT_MODEL_AMBIENT, amb);
+        }
+    }
+
     drawSkydome(camX, camY, camZ, g.r);
     drawLevel(gLevel.map, camX, camZ, dirX, dirZ, g.r, g.time);
     drawEntities(gLevel.enemies, gLevel.items, camX, camZ, dirX, dirZ, g.r);
+    drawLightPosts(gLevel.posts, camX, camZ, dirX, dirZ);
 }
 
 // FUNÇÃO PRINCIPAL DE DESENHO (REFATORADA: usa menuRender / pauseMenuRender / hudRenderAll)
