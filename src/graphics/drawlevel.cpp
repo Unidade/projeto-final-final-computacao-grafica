@@ -145,18 +145,19 @@ static void desenhaQuadTeto(float x, float z, float tile, float tilesUV)
 {
     float half = tile * 0.5f;
 
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glColor3f(0.0f, 0.0f, 0.0f);
+
     glBegin(GL_QUADS);
     glNormal3f(0.0f, -1.0f, 0.0f);
 
-    glTexCoord2f(0.0f, 0.0f);
     glVertex3f(x - half, CEILING_H, z - half);
-    glTexCoord2f(tilesUV, 0.0f);
     glVertex3f(x + half, CEILING_H, z - half);
-    glTexCoord2f(tilesUV, tilesUV);
     glVertex3f(x + half, CEILING_H, z + half);
-    glTexCoord2f(0.0f, tilesUV);
     glVertex3f(x - half, CEILING_H, z + half);
     glEnd();
+
+    glColor3f(1.0f, 1.0f, 1.0f);
 }
 
 static void desenhaQuadChao(float x, float z, float tile, float tilesUV)
@@ -187,11 +188,7 @@ static void desenhaTileChao(float x, float z, GLuint texChaoX, bool temTeto)
 
     desenhaQuadChao(x, z, TILE, 2.0f);
 
-    if (temTeto)
-    {
-        glBindTexture(GL_TEXTURE_2D, texChaoX);
-        desenhaQuadTeto(x, z, TILE, 2.0f);
-    }
+    desenhaQuadTeto(x, z, TILE, 2.0f);
 }
 
 // --- Desenha parede FACE POR FACE ---
@@ -306,6 +303,7 @@ static void desenhaTileLava(float x, float z, const RenderAssets &r, float time)
     desenhaQuadChao(x, z, TILE, 2.0f);
 
     glUseProgram(0);
+    desenhaQuadTeto(x, z, TILE, 2.0f);
 }
 
 static void desenhaTileSangue(float x, float z, const RenderAssets &r, float time)
@@ -328,6 +326,7 @@ static void desenhaTileSangue(float x, float z, const RenderAssets &r, float tim
     desenhaQuadChao(x, z, TILE, 2.0f);
 
     glUseProgram(0);
+    desenhaQuadTeto(x, z, TILE, 2.0f);
 }
 
 // --- Checa vizinhos ---
