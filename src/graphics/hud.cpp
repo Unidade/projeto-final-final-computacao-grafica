@@ -37,16 +37,21 @@ static void drawCrosshair(int w, int h)
 
     begin2D(w, h);
 
-    glColor3f(0.0f, 1.0f, 0.0f);
-    glLineWidth(2.0f);
-
     float cx = w / 2.0f;
     float cy = h / 2.0f;
-    float size = 10.0f;
+    float size = 8.0f;
+
+    glColor3f(0.95f, 0.92f, 0.65f);
+    glLineWidth(2.0f);
 
     glBegin(GL_LINES);
     glVertex2f(cx - size, cy); glVertex2f(cx + size, cy);
     glVertex2f(cx, cy - size); glVertex2f(cx, cy + size);
+    glEnd();
+
+    glPointSize(3.0f);
+    glBegin(GL_POINTS);
+    glVertex2f(cx, cy);
     glEnd();
 
     end2D();
@@ -131,12 +136,12 @@ static void drawWeaponHUD(int w, int h, const HudTextures& tex, WeaponState ws)
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     glBindTexture(GL_TEXTURE_2D, currentTex);
-    glColor4f(1, 1, 1, 1);
+    glColor4f(0.85f, 0.85f, 0.82f, 1);
 
-    float gunH = h * 0.5f;
+    float gunH = h * 0.56f;
     float gunW = gunH;
     float x = (w - gunW) / 2.0f;
-    float y = 0.0f;
+    float y = -8.0f;
 
     if (ws != WeaponState::W_IDLE)
     {

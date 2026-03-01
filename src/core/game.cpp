@@ -62,16 +62,22 @@ void gameTogglePause()
         g.state = GameState::JOGANDO;
 }
 
+void gameToggleFlashlight()
+{
+    g.flashlightOn = !g.flashlightOn;
+}
+
 // --- INIT ---
 bool gameInit(const char *mapPath)
 {
     glEnable(GL_LIGHTING);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_TEXTURE_2D);
-    glClearColor(0.05f, 0.05f, 0.1f, 1.0f);
+    glClearColor(0.005f, 0.005f, 0.02f, 1.0f);
 
     setupSunLightOnce();
     setupIndoorLightOnce();
+    setupFlashlightOnce();
 
     if (!loadAssets(gAssets))
         return false;
@@ -146,6 +152,7 @@ void gameReset()
 
     g.weapon.state = WeaponState::W_IDLE;
     g.weapon.timer = 0.0f;
+    g.flashlightOn = true;
     // Respawna o jogador
     applySpawn(gLevel, camX, camZ);
 }
@@ -220,6 +227,7 @@ void drawWorld3D()
 
     // Desenha o cenário
     setSunDirectionEachFrame();
+    setFlashlightEachFrame(camX, camY, camZ, dirX, dirY, dirZ, g.flashlightOn);
     drawSkydome(camX, camY, camZ, g.r);
     drawLevel(gLevel.map, camX, camZ, dirX, dirZ, g.r, g.time);
     drawEntities(gLevel.enemies, gLevel.items, camX, camZ, dirX, dirZ, g.r);

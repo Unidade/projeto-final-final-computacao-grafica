@@ -81,6 +81,10 @@ void keyboard(unsigned char key, int, int)
         case 'R':
             playerTryReload();
             break;
+        case 'f':
+        case 'F':
+            gameToggleFlashlight();
+            break;
         }
     }
 }

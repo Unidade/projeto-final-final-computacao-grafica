@@ -7,13 +7,13 @@ bool loadAssets(GameAssets &a)
 {
     a.texMenuBG = carregaTextura("assets/menu_bg.png");
 
-    a.texChao = carregaTextura("assets/181.png");
-    a.texParede = carregaTextura("assets/091.png");
+    a.texChao = carregaTextura("assets/150.png");
+    a.texParede = carregaTextura("assets/190.png");
     a.texSangue = carregaTextura("assets/016.png");
     a.texLava = carregaTextura("assets/179.png");
-    a.texChaoInterno = carregaTextura("assets/100.png");
-    a.texParedeInterna = carregaTextura("assets/060.png");
-    a.texTeto = carregaTextura("assets/081.png");
+    a.texChaoInterno = carregaTextura("assets/185.png");
+    a.texParedeInterna = carregaTextura("assets/115.png");
+    a.texTeto = carregaTextura("assets/082.png");
 
     a.progSangue = criaShader("shaders/blood.vert", "shaders/blood.frag");
     a.progLava = criaShader("shaders/lava.vert", "shaders/lava.frag");
@@ -44,18 +44,18 @@ bool loadAssets(GameAssets &a)
 
     a.texHealthOverlay = carregaTextura("assets/heal.png");
     a.texGunDefault = carregaTextura("assets/gun_default.png");
-    a.texGunFire1 = carregaTextura("assets/gun_fire1.png");
-    a.texGunFire2 = carregaTextura("assets/gun_fire2.png");
-    a.texGunReload1 = carregaTextura("assets/gun_reload1.png");
-    a.texGunReload2 = carregaTextura("assets/gun_reload2.png");
+    a.texGunFire1 = carregaTextura("assets/gun_default.png");
+    a.texGunFire2 = carregaTextura("assets/gun_default.png");
+    a.texGunReload1 = carregaTextura("assets/gun_default.png");
+    a.texGunReload2 = carregaTextura("assets/gun_default.png");
     a.texDamage = carregaTextura("assets/damage.png");
 
     a.texHealth = carregaTextura("assets/health.png");
     a.texAmmo = carregaTextura("assets/066.png");
 
-    a.texSkydome = carregaTextura("assets/Va4wUMQ.png");
+    a.texSkydome = carregaTextura("assets/menu_bg.png");
 
-    a.texGunHUD = carregaTextura("assets/Shotgun.png");
+    a.texGunHUD = carregaTextura("assets/gun_default.png");
     a.texHudFundo = carregaTextura("assets/088.png");
 
     if (!a.texChao || !a.texParede || !a.texSangue || !a.texLava || !a.progSangue ||

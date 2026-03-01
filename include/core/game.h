@@ -11,6 +11,7 @@ Level &gameLevel();
 GameState gameGetState();
 void gameSetState(GameState s);
 void gameTogglePause();
+void gameToggleFlashlight();
 
 // Acesso controlado ao Level (se alguém ainda precisar)
 Level &gameLevel();
