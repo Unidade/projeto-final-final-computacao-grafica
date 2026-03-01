@@ -69,6 +69,7 @@ A cena pode ser explorada em primeira pessoa, com movimentação típica de FPS 
 | **A** | Mover para a esquerda (strafe) |
 | **S** | Recuar |
 | **D** | Mover para a direita (strafe) |
+| **F** | Liga/Desliga lanterna tática |
 
 ---
 

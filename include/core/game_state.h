@@ -43,5 +43,7 @@ struct GameContext
     WeaponAnim weapon;
     float time = 0.0f;
 
+    bool flashlightOn = true;
+
     RenderAssets r;
 };

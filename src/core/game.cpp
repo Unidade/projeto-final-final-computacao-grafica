@@ -62,16 +62,22 @@ void gameTogglePause()
         g.state = GameState::JOGANDO;
 }
 
+void gameToggleFlashlight()
+{
+    g.flashlightOn = !g.flashlightOn;
+}
+
 // --- INIT ---
 bool gameInit(const char *mapPath)
 {
     glEnable(GL_LIGHTING);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_TEXTURE_2D);
-    glClearColor(0.05f, 0.05f, 0.1f, 1.0f);
+    glClearColor(0.005f, 0.005f, 0.02f, 1.0f);
 
     setupSunLightOnce();
     setupIndoorLightOnce();
+    setupFlashlightOnce();
 
     if (!loadAssets(gAssets))
         return false;
@@ -90,6 +96,8 @@ bool gameInit(const char *mapPath)
     gHudTex.texHudFundo = gAssets.texHudFundo;
     gHudTex.texGunHUD = gAssets.texGunHUD;
 
+    gHudTex.texLinternOn = gAssets.texLinternOn;
+    gHudTex.texLinternOff = gAssets.texLinternOff;
     gHudTex.texGunDefault = gAssets.texGunDefault;
     gHudTex.texGunFire1 = gAssets.texGunFire1;
     gHudTex.texGunFire2 = gAssets.texGunFire2;
@@ -130,6 +138,7 @@ bool gameInit(const char *mapPath)
     g.time = 0.0f;
     g.player = PlayerState{};
     g.weapon = WeaponAnim{};
+    g.flashlightOn = true;
 
     return true;
 }
@@ -146,6 +155,7 @@ void gameReset()
 
     g.weapon.state = WeaponState::W_IDLE;
     g.weapon.timer = 0.0f;
+    g.flashlightOn = true;
     // Respawna o jogador
     applySpawn(gLevel, camX, camZ);
 }
@@ -220,6 +230,7 @@ void drawWorld3D()
 
     // Desenha o cenário
     setSunDirectionEachFrame();
+    setFlashlightEachFrame(camX, camY, camZ, dirX, dirY, dirZ, g.flashlightOn);
     drawSkydome(camX, camY, camZ, g.r);
     drawLevel(gLevel.map, camX, camZ, dirX, dirZ, g.r, g.time);
     drawEntities(gLevel.enemies, gLevel.items, camX, camZ, dirX, dirZ, g.r);
@@ -238,6 +249,7 @@ void gameRender()
     hs.damageAlpha = g.player.damageAlpha;
     hs.healthAlpha = g.player.healthAlpha;
     hs.weaponState = g.weapon.state;
+    hs.flashlightOn = g.flashlightOn;
 
     // --- ESTADO: MENU INICIAL ---
     if (g.state == GameState::MENU_INICIAL)
