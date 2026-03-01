@@ -18,6 +18,8 @@ struct GameAssets
     GLuint texHealthOverlay = 0; // Tela de cura
     GLuint texHealth = 0;
     GLuint texAmmo = 0;
+    GLuint texLinternOn = 0;
+    GLuint texLinternOff = 0;
     GLuint texGunDefault = 0;
     GLuint texGunFire1 = 0;
     GLuint texGunFire2 = 0;

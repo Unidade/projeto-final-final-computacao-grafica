@@ -17,8 +17,8 @@ static const float CEILING_H = 4.0f; // altura do teto
 static const float WALL_H = 4.0f;    // altura da parede
 static const float EPS_Y = 0.001f;   // evita z-fighting
 
-static const GLfloat kAmbientOutdoor[] = {0.45f, 0.30f, 0.25f, 1.0f}; // quente (seu atual)
-static const GLfloat kAmbientIndoor[] = {0.12f, 0.12f, 0.18f, 1.0f};  // frio/azulado
+static const GLfloat kAmbientOutdoor[] = {0.04f, 0.04f, 0.06f, 1.0f}; // noite escura
+static const GLfloat kAmbientIndoor[] = {0.02f, 0.02f, 0.03f, 1.0f};  // interior sombrio
 
 // ======================
 // CONFIG ÚNICA DO CULLING (XZ)

@@ -9,6 +9,8 @@ struct HudTextures
     GLuint texHudFundo = 0;
     GLuint texGunHUD = 0;
 
+    GLuint texLinternOn = 0;
+    GLuint texLinternOff = 0;
     GLuint texGunDefault = 0;
     GLuint texGunFire1 = 0;
     GLuint texGunFire2 = 0;
@@ -29,6 +31,7 @@ struct HudState
     float healthAlpha = 0.0f;
 
     WeaponState weaponState = WeaponState::W_IDLE;
+    bool flashlightOn = true;
 };
 
 void hudRenderAll(
