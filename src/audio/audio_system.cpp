@@ -351,8 +351,14 @@ void audioUpdate(
         float chaseGain = anyChasing ? (AudioTuning::MASTER * AudioTuning::CHASE_GAIN) : 0.0f;
         if (a.srcAmbient) a.engine.setSourceGain(a.srcAmbient, ambGain);
         a.engine.setSourceGain(a.srcChase, chaseGain);
+
         if (anyChasing) {
-            a.engine.play(a.srcChase);
+            // Only start chase music if it's not already playing, to avoid restarts
+            ALint st = 0;
+            alGetSourcei(a.srcChase, AL_SOURCE_STATE, &st);
+            if (st != AL_PLAYING) {
+                a.engine.play(a.srcChase);
+            }
         } else {
             a.engine.stop(a.srcChase);
         }

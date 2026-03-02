@@ -161,6 +161,13 @@ void updateEntities(float dt)
         float dPost = nearestPost ? std::sqrt(nearestPostDistSq) : FLT_MAX;
         float viewDist = getEnemyViewDist(en.typeEnum);
 
+        bool isBoss = (en.typeEnum == EnemyType::BOSS);
+
+        // Para o boss, a lanterna não oferece proteção — apenas os postes/safe zones.
+        bool canSeePlayerNow = playerVisibleToMonster;
+        if (isBoss)
+            canSeePlayerNow = !playerInSafeZone;
+
         bool nearActivePost = nearestPost && (dPost < GameConfig::SAFE_ZONE_RADIUS * 0.9f);
         bool retreatDesired = nearActivePost &&
                               (playerInSafeZone ||
@@ -175,7 +182,7 @@ void updateEntities(float dt)
         {
         case STATE_IDLE:
         {
-            if (playerVisibleToMonster && dist < viewDist)
+            if (canSeePlayerNow && dist < viewDist)
             {
                 en.state = STATE_CHASE;
                 en.chaseMemoryTimer = getEnemyAggroMemory(en.typeEnum);
@@ -220,7 +227,9 @@ void updateEntities(float dt)
         {
             float memory = getEnemyAggroMemory(en.typeEnum);
 
-            if (!playerVisibleToMonster && memory > 0.0f && !playerInSafeZone)
+            // Apenas inimigos comuns usam memória de perseguição; o boss persegue
+            // continuamente enquanto o jogador não estiver em uma safe zone.
+            if (!isBoss && !playerVisibleToMonster && memory > 0.0f && !playerInSafeZone)
             {
                 if (en.chaseMemoryTimer <= 0.0f)
                     en.chaseMemoryTimer = memory;
@@ -228,7 +237,17 @@ void updateEntities(float dt)
                     en.chaseMemoryTimer -= dt;
             }
 
-            bool lostPlayer = !playerVisibleToMonster && (en.chaseMemoryTimer <= 0.0f || playerInSafeZone);
+            bool lostPlayer = false;
+            if (isBoss)
+            {
+                // O boss só “perde” o jogador quando ele entra numa safe zone.
+                if (playerInSafeZone)
+                    lostPlayer = true;
+            }
+            else
+            {
+                lostPlayer = !playerVisibleToMonster && (en.chaseMemoryTimer <= 0.0f || playerInSafeZone);
+            }
             if (lostPlayer)
             {
                 en.state = STATE_IDLE; // Player protegido ou longe demais
@@ -272,9 +291,14 @@ void updateEntities(float dt)
         }
 
         case STATE_ATTACK:
-            if (!playerVisibleToMonster)
+        {
+            bool canAttackNow = playerVisibleToMonster;
+            if (isBoss)
+                canAttackNow = !playerInSafeZone;
+
+            if (!canAttackNow)
             {
-                en.state = STATE_IDLE; // Player entered light — can't attack
+                en.state = STATE_IDLE; // Player entrou em proteção — não pode atacar
                 en.wanderTimer = 0.0f;
             }
             else if (dist > ENEMY_ATTACK_DIST)
@@ -287,12 +311,13 @@ void updateEntities(float dt)
                 if (en.attackCooldown <= 0.0f)
                 {
                     g.player.health -= 10;
-                    en.attackCooldown = 1.0f;
+                    en.attackCooldown = 0.8f;
                     g.player.damageAlpha = 1.0f;
                     audioPlayHurt(audio);
                 }
             }
             break;
+        }
 
         case STATE_RETREAT:
         {
