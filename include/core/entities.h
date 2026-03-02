@@ -32,8 +32,11 @@ struct Enemy
     // NOVO: Tempo de espera entre um ataque e outro
     float attackCooldown;
 
-    // NOVO: Tempo que ele fica com a textura de dano
+    // Tempo que ele fica com a textura de dano
     float hurtTimer;
+
+    // Flag para inimigo 3D avatar (GLB) - todos os inimigos são avatars
+    bool isAvatar;
 };
 
 enum ItemType
