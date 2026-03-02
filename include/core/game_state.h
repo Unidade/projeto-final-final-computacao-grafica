@@ -10,9 +10,6 @@ struct PlayerState
     float damageAlpha = 0.0f;
     float healthAlpha = 0.0f;
 
-    int currentAmmo = 12;
-    int reserveAmmo = 25;
-
     // --- Doom-Light ---
     float batteryCharge       = 100.0f; // 0-100
     float batteryDrainRate    = 8.0f;   // unidades/s quando ligada
@@ -21,6 +18,9 @@ struct PlayerState
 
     // --- Luzes Apagadas: battery collectible objective ---
     int batteriesCollected = 0;
+
+    // --- Luzes Apagadas: per-level key (hasLevelKey[level] = true when collected) ---
+    bool hasLevelKey[4] = {false, false, false, false};
 };
 
 struct WeaponAnim
@@ -32,16 +32,15 @@ struct WeaponAnim
 struct RenderAssets
 {
     GLuint texChao = 0, texParede = 0, texSangue = 0, texDoor = 0;
-    GLuint texChaoInterno = 0, texParedeInterna = 0, texTeto = 0, texSkydome = 0, texMenuBG = 0;
-    // GLuint texSkydome=0;
+    GLuint texChaoInterno = 0, texParedeInterna = 0, texTeto = 0, texMenuBG = 0, texGameOver = 0;
 
     GLuint texEnemies[5] = {0};
     GLuint texEnemiesRage[5] = {0};
     GLuint texEnemiesDamage[5] = {0};
 
     GLuint texHealth = 0;
-    GLuint texAmmo = 0;
     GLuint texBattery = 0;
+    GLuint texKey[3] = {0, 0, 0};
 
     GLuint progSangue = 0;
 };

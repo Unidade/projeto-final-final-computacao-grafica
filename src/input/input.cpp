@@ -88,10 +88,7 @@ void keyboard(unsigned char key, int, int)
         case 'D':
             keyD = true;
             break;
-        case 'r':
-        case 'R':
-            playerTryReload();
-            break;
+        // R (reload) removed — no gun
         case 'f':
         case 'F':
             gameToggleFlashlight();
@@ -129,9 +126,6 @@ void keyboardUp(unsigned char key, int, int)
 }
 void mouseClick(int button, int state, int x, int y)
 {
-    // Se apertou o botão esquerdo
-    if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
-    {
-        playerTryAttack();
-    }
+    (void)button; (void)state; (void)x; (void)y;
+    // Left-click (attack) removed — no gun in Luzes Apagadas
 }

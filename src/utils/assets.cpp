@@ -5,7 +5,9 @@
 
 bool loadAssets(GameAssets &a)
 {
-    a.texMenuBG = carregaTextura("assets/menu_bg.png");
+    a.texMenuBG = carregaTextura("assets/textures/menu.jpeg");
+    if (!a.texMenuBG) a.texMenuBG = carregaTextura("assets/menu_bg.png");
+    a.texGameOver = carregaTextura("assets/textures/gameover.jpeg");
 
     // --- Dark horror textures ---
     a.texChao = carregaTextura("assets/textures/floors/floor_concrete_wet.jpg");
@@ -46,30 +48,22 @@ bool loadAssets(GameAssets &a)
     a.texHealthOverlay = carregaTextura("assets/heal.png");
     a.texLinternOn = carregaTextura("assets/linternOn.png");
     a.texLinternOff = carregaTextura("assets/linternOff.png");
-    a.texGunDefault = a.texLinternOn;
-    a.texGunFire1 = a.texLinternOn;
-    a.texGunFire2 = a.texLinternOn;
-    a.texGunReload1 = a.texLinternOff;
-    a.texGunReload2 = a.texLinternOff;
     a.texDamage = carregaTextura("assets/damage.png");
 
     a.texHealth = carregaTextura("assets/health.png");
-    a.texAmmo = carregaTextura("assets/066.png");
     a.texBattery = carregaTextura("assets/battery.png");
-    if (!a.texBattery) a.texBattery = a.texAmmo; // fallback if battery.png missing
+    if (!a.texBattery) a.texBattery = a.texHealth; // fallback if battery.png missing
 
-    a.texSkydome = carregaTextura("assets/menu_bg.png");
-
-    a.texGunHUD = a.texLinternOn;
-    a.texHudFundo = carregaTextura("assets/088.png");
+    a.texKey[0] = carregaTextura("assets/items/Key0_Icon.png");
+    a.texKey[1] = carregaTextura("assets/items/Key1_Icon.png");
+    a.texKey[2] = carregaTextura("assets/items/Key2_Icon.png");
 
     if (!a.texChao || !a.texParede || !a.texSangue || !a.progSangue ||
-        !a.texHealth || !a.texLinternOn || !a.texLinternOff || !a.texGunDefault || !a.texGunFire1 ||
-        !a.texGunFire2 || !a.texSkydome || !a.texGunReload1 || !a.texGunReload2 ||
-        !a.texDamage || !a.texAmmo || !a.texHealthOverlay || !a.texEnemies[0] ||
+        !a.texHealth || !a.texLinternOn || !a.texLinternOff ||
+        !a.texDamage || !a.texHealthOverlay || !a.texEnemies[0] ||
         !a.texEnemiesRage[0] || !a.texEnemiesDamage[0] || !a.texEnemies[1] ||
         !a.texEnemiesRage[1] || !a.texEnemiesDamage[1] || !a.texEnemies[2] ||
-        !a.texEnemiesRage[2] || !a.texEnemiesDamage[2] || !a.texGunHUD || !a.texHudFundo || !a.texMenuBG)
+        !a.texEnemiesRage[2] || !a.texEnemiesDamage[2] || !a.texMenuBG)
     {
         std::printf("ERRO: falha ao carregar algum asset (textura/shader).\n");
         return false;

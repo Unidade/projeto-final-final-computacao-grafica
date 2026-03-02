@@ -13,17 +13,10 @@ namespace AudioTuning
     // 0.8f = um pouco mais alto
     // 1.0f = padrão “cheio"
     // 1.2f / 1.5f = bem alto (cuidado pra não estourar)
-    static constexpr float AMBIENT_GAIN = 0.55f;
-    static constexpr float SHOT_GAIN = 0.95f;
+    static constexpr float AMBIENT_GAIN = 0.30f;
     static constexpr float STEP_GAIN = 0.55f;
-
-    static constexpr float RELOAD_GAIN = 0.95f;
-    static constexpr float PUMP_GAIN = 0.85f; // som do "pump/click" do shotgun
-    static constexpr float PUMP_TIME = 0.75f; // segundos após o tiro para tocar o pump
-
-    static constexpr float DAMAGE_GAIN = 1.00f;   // hurt do player
-    static constexpr float GRUNT_GAIN = 1.20f;    // grunhido do player
-    static constexpr int GRUNT_EVERY_N_SHOTS = 5; // a cada N tiros, toca um grunt
+    static constexpr float PUMP_GAIN = 0.85f; // door locked / battery pickup
+    static constexpr float DAMAGE_GAIN = 1.00f;
 
     // Respiração (low HP)
     static constexpr int LOW_HP_THRESHOLD = 40; // vida abaixo disso ativa respiração

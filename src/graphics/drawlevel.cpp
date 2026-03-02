@@ -13,13 +13,14 @@
 // =====================
 
 // Config do grid
-static const float TILE = 4.0f;      // tamanho do tile no mundo
-static const float CEILING_H = 5.0f; // teto alto para cone de luz amplo
-static const float WALL_H = 6.0f;    // parede mais alta que o teto
-static const float EPS_Y = 0.001f;   // evita z-fighting
+static const float TILE = 4.0f;           // tamanho do tile no mundo
+static const float WALL_THICKNESS = 1.0f; // 1.0 = walls fill full tile (no gaps)
+static const float CEILING_H = 10.0f;     // teto alto
+static const float WALL_H = 12.0f;        // paredes altas
+static const float EPS_Y = 0.001f;        // evita z-fighting
 
-static const GLfloat kAmbientOutdoor[] = {0.04f, 0.04f, 0.06f, 1.0f}; // noite escura
-static const GLfloat kAmbientIndoor[] = {0.02f, 0.02f, 0.03f, 1.0f};  // interior sombrio
+static const GLfloat kAmbientOutdoor[] = {0.06f, 0.06f, 0.08f, 1.0f}; // base uniforme
+static const GLfloat kAmbientIndoor[] = {0.05f, 0.05f, 0.07f, 1.0f};  // interior uniforme
 
 // ======================
 // CONFIG ÚNICA DO CULLING (XZ)
@@ -86,22 +87,8 @@ static float hash01(float x)
 
 static float flickerFluorescente(float t)
 {
-    const float rate = 4.0f;
-    float block = floorf(t * rate);
-    float r = hash01(block);
-
-    if (r < 0.22f)
-    {
-        float phase = t * rate - block;
-
-        if (phase > 0.35f && phase < 0.55f)
-            return 0.12f;
-
-        if (r < 0.06f && phase > 0.65f && phase < 0.78f)
-            return 0.40f;
-    }
-
-    return 0.96f + 0.04f * sinf(t * 5.0f);
+    (void)t;
+    return 1.0f; // No flicker: uniform lighting
 }
 
 static void setIndoorLampAt(float x, float z, float intensity)
@@ -216,10 +203,10 @@ static void desenhaTileChao(float x, float z, GLuint texChaoX, bool /*temTeto*/,
     desenhaQuadTeto(x, z, TILE, 2.0f, texTeto);
 }
 
-// --- Desenha parede FACE POR FACE ---
+// --- Desenha parede FACE POR FACE (paredes finas) ---
 static void desenhaParedePorFace(float x, float z, GLuint texParedeX, int f)
 {
-    float half = TILE * 0.5f;
+    float half = TILE * 0.5f * WALL_THICKNESS;
 
     glUseProgram(0);
     glColor3f(1, 1, 1);
@@ -283,7 +270,7 @@ static void desenhaParedePorFace(float x, float z, GLuint texParedeX, int f)
     glEnd();
 }
 
-// Wrapper para desenhar o cubo todo (parede outdoor)
+// Wrapper para desenhar o cubo todo (parede outdoor, fina)
 static void desenhaParedeCuboCompleto(float x, float z, GLuint texParedeX)
 {
     desenhaParedePorFace(x, z, texParedeX, 0);
@@ -291,7 +278,7 @@ static void desenhaParedeCuboCompleto(float x, float z, GLuint texParedeX)
     desenhaParedePorFace(x, z, texParedeX, 2);
     desenhaParedePorFace(x, z, texParedeX, 3);
 
-    float half = TILE * 0.5f;
+    float half = TILE * 0.5f * WALL_THICKNESS;
     glBindTexture(GL_TEXTURE_2D, texParedeX);
     glBegin(GL_QUADS);
     glNormal3f(0.0f, 1.0f, 0.0f);
@@ -414,7 +401,7 @@ void drawLevel(const MapLoader &map, float px, float pz, float dx, float dz, con
             char c = data[z][x];
 
             bool isEntity = (c == 'J' || c == 'T' || c == 'M' || c == 'K' ||
-                             c == 'G' || c == 'H' || c == 'A' || c == 'V' ||
+                             c == 'G' || c == 'H' || c == 'V' || c == 'Y' ||
                              c == 'E' || c == 'F' || c == 'I' || c == 'P' || c == 'D');
 
             if (isEntity)
@@ -544,10 +531,14 @@ void drawEntities(const std::vector<Enemy> &enemies, const std::vector<Item> &it
 
         if (item.type == ITEM_HEALTH)
             drawSprite(item.x, item.z, 0.7f, 0.7f, r.texHealth, camX, camZ);
-        else if (item.type == ITEM_AMMO)
-            drawSprite(item.x, item.z, 0.7f, 0.7f, r.texAmmo, camX, camZ);
         else if (item.type == ITEM_BATTERY)
             drawSprite(item.x, item.z, 0.7f, 0.7f, r.texBattery, camX, camZ);
+        else if (item.type == ITEM_KEY)
+        {
+            int kl = (item.keyLevel >= 1 && item.keyLevel <= 3) ? (item.keyLevel - 1) : 0;
+            GLuint texK = r.texKey[kl];
+            if (texK) drawSprite(item.x, item.z, 0.7f, 0.7f, texK, camX, camZ);
+        }
     }
 
     // --- INIMIGOS (todos são 3D Avatar) ---

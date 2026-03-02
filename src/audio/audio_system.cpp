@@ -126,25 +126,22 @@ void audioInit(AudioSystem& a, const Level& level) {
 
     a.engine.setDistanceModel();
 
-    // Loads (com fallback mono/estéreo)
-    a.bufAmbient = a.engine.loadWav("assets/audio/music.wav");
+    // Ambient: try music_ambient_loop (convert ogg/mp3 to WAV if needed)
+    a.bufAmbient = a.engine.loadWav("assets/audio/music/music_ambient_loop.wav");
     if (!a.bufAmbient) a.bufAmbient = a.engine.loadWav("assets/audio/music.wav");
 
-    a.bufShot = a.engine.loadWav("assets/audio/shot_mono.wav");
-    if (!a.bufShot) a.bufShot = a.engine.loadWav("assets/audio/shot.wav");
-
-    a.bufStep = a.engine.loadWav("assets/audio/step_mono.wav");
+    a.bufStep = a.engine.loadWav("assets/audio/sfx/sfx_step_concrete_01.wav.wav");
+    if (!a.bufStep) a.bufStep = a.engine.loadWav("assets/audio/step_mono.wav");
     if (!a.bufStep) a.bufStep = a.engine.loadWav("assets/audio/step.wav");
 
     a.bufEnemy = a.engine.loadWav("assets/audio/enemy_mono.wav");
     if (!a.bufEnemy) a.bufEnemy = a.engine.loadWav("assets/audio/enemy.wav");
 
-    a.bufReload = a.engine.loadWav("assets/audio/reload_mono.wav");
-    if (!a.bufReload) a.bufReload = a.engine.loadWav("assets/audio/reload.wav");
+    a.bufClickReload = a.engine.loadWav("assets/audio/sfx/sfx_door_locked.wav.wav");
+    if (!a.bufClickReload) a.bufClickReload = a.engine.loadWav("assets/audio/click_reload_mono.wav");
 
-    a.bufClickReload = a.engine.loadWav("assets/audio/click_reload_mono.wav");
-
-    a.bufKill = a.engine.loadWav("assets/audio/kill_mono.wav");
+    a.bufKill = a.engine.loadWav("assets/audio/sfx/sfx_monster_death.wav");
+    if (!a.bufKill) a.bufKill = a.engine.loadWav("assets/audio/kill_mono.wav");
 
     a.bufEnemyScream = a.engine.loadWav("assets/audio/enemy_scream_mono.wav");
 
@@ -155,11 +152,9 @@ void audioInit(AudioSystem& a, const Level& level) {
     a.bufMonsterChase = a.engine.loadWav("assets/audio/sfx/sfx_monster_chase.wav.wav");
     a.bufMonsterAttack = a.engine.loadWav("assets/audio/sfx/sfx_monster_attack.wav.wav");
     a.bufMonsterIdle = a.engine.loadWav("assets/audio/sfx/sfx_monster_idle.wav.wav");
-    a.bufMonsterSpot = a.engine.loadWav("assets/audio/sfx/sfx_monster_spot.mp3");
+    a.bufMonsterSpot = a.engine.loadWav("assets/audio/sfx/sfx_monster_spot.wav");
 
     a.bufBreath = a.engine.loadWav("assets/audio/breath_mono.wav");
-
-    a.bufGrunt = a.engine.loadWav("assets/audio/grunt_mono.wav");
 
     // Ambient (2D loop)
     if (a.bufAmbient) {
@@ -171,13 +166,6 @@ void audioInit(AudioSystem& a, const Level& level) {
         a.engine.play(a.srcAmbient);
     }
 
-    // Shot (2D one-shot)
-    if (a.bufShot) {
-        a.srcShot = a.engine.createSource(a.bufShot, false);
-        alSourcei(a.srcShot, AL_SOURCE_RELATIVE, AL_TRUE);
-        a.engine.setSourceGain(a.srcShot, AudioTuning::MASTER * AudioTuning::SHOT_GAIN);
-    }
-
     // Step (2D loop, controlado no update)
     if (a.bufStep) {
         a.srcStep = a.engine.createSource(a.bufStep, true);
@@ -185,14 +173,7 @@ void audioInit(AudioSystem& a, const Level& level) {
         a.engine.setSourceGain(a.srcStep, AudioTuning::MASTER * AudioTuning::STEP_GAIN);
     }
 
-    // Reload (2D one-shot)
-    if (a.bufReload) {
-        a.srcReload = a.engine.createSource(a.bufReload, false);
-        alSourcei(a.srcReload, AL_SOURCE_RELATIVE, AL_TRUE);
-        a.engine.setSourceGain(a.srcReload, AudioTuning::MASTER * AudioTuning::RELOAD_GAIN);
-    }
-
-    // Pump click (2D one-shot)
+    // Pump click / door locked / battery (2D one-shot)
     if (a.bufClickReload) {
         a.srcClickReload = a.engine.createSource(a.bufClickReload, false);
         if (a.srcClickReload) {
@@ -233,16 +214,6 @@ void audioInit(AudioSystem& a, const Level& level) {
             alSource3f(a.srcBreath, AL_POSITION, 0.0f, 0.0f, 0.0f);
             a.engine.setSourceGain(a.srcBreath, 0.0f);
             a.engine.play(a.srcBreath);
-        }
-    }
-
-    // Grunt (2D one-shot)
-    if (a.bufGrunt) {
-        a.srcGrunt = a.engine.createSource(a.bufGrunt, false);
-        if (a.srcGrunt) {
-            alSourcei(a.srcGrunt, AL_SOURCE_RELATIVE, AL_TRUE);
-            alSource3f(a.srcGrunt, AL_POSITION, 0.0f, 0.0f, 0.0f);
-            a.engine.setSourceGain(a.srcGrunt, AudioTuning::MASTER * AudioTuning::GRUNT_GAIN);
         }
     }
 
@@ -405,23 +376,6 @@ void audioUpdate(
     }
 }
 
-void audioPlayShot(AudioSystem& a) {
-    if (!a.ok || a.srcShot == 0) return;
-
-    alSourcei(a.srcShot, AL_SOURCE_RELATIVE, AL_TRUE);
-    a.engine.setSourcePos(a.srcShot, {0.0f, 0.0f, 0.0f});
-    a.engine.setSourceDistance(a.srcShot, 1.0f, 0.0f, 1000.0f);
-
-    a.engine.stop(a.srcShot);
-    a.engine.play(a.srcShot);
-}
-
-void audioPlayReload(AudioSystem& a) {
-    if (!a.ok || a.srcReload == 0) return;
-    a.engine.stop(a.srcReload);
-    a.engine.play(a.srcReload);
-}
-
 void audioPlayPumpClick(AudioSystem& a) {
     if (!a.ok || a.srcClickReload == 0) return;
     a.engine.stop(a.srcClickReload);
@@ -440,17 +394,4 @@ void audioPlayKillAt(AudioSystem& a, float x, float z) {
 
 void audioPlayBatteryPickup(AudioSystem& a) {
     play2D(a, a.srcClickReload);
-}
-
-void audioOnPlayerShot(AudioSystem& a) {
-    if (!a.ok) return;
-    a.shotsSinceGrunt++;
-
-    if (a.shotsSinceGrunt >= AudioTuning::GRUNT_EVERY_N_SHOTS) {
-        a.shotsSinceGrunt = 0;
-        if (a.srcGrunt) {
-            a.engine.stop(a.srcGrunt);
-            a.engine.play(a.srcGrunt);
-        }
-    }
 }

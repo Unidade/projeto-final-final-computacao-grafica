@@ -12,12 +12,11 @@ namespace GameConfig
     constexpr float PLAYER_STEPS = 0.15f;
 
     // --- Luzes Apagadas: Safe Zone ---
-    // Safe zone radius = spotlight cone radius on floor
-    // = tan(55°) * CEILING_H(5.0) ≈ 7.14
-    constexpr float CEILING_H = 5.0f;
+    // Safe zone radius = spotlight cone radius on floor = tan(55°) * CEILING_H
+    constexpr float CEILING_H = 10.0f;
     constexpr float CONE_ANGLE_DEG = 55.0f;
-    // Can't use tanf in constexpr, so pre-compute: tan(55° * π/180) ≈ 1.4281
-    constexpr float SAFE_ZONE_RADIUS = 7.14f;
+    // tan(55°) * 10 ≈ 14.28
+    constexpr float SAFE_ZONE_RADIUS = 14.28f;
 
     // Luzes Apagadas: batteries needed to activate elevator
     constexpr int BATTERIES_REQUIRED = 14;

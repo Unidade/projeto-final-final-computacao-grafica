@@ -42,9 +42,8 @@ struct Enemy
 enum ItemType
 {
     ITEM_HEALTH,
-    ITEM_AMMO,
-    ITEM_AMMO_BOX,
-    ITEM_BATTERY
+    ITEM_BATTERY,
+    ITEM_KEY
 };
 
 struct Item
@@ -54,4 +53,6 @@ struct Item
     bool active; // Se false, já foi pego
 
     float respawnTimer;
+
+    int keyLevel = 0; // for ITEM_KEY: 1, 2, or 3 (which level this key unlocks)
 };

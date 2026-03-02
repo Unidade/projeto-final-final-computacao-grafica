@@ -23,9 +23,7 @@ struct AudioSystem {
 
     // Buffers
     ALuint bufAmbient = 0;
-    ALuint bufShot = 0;
     ALuint bufStep = 0;
-    ALuint bufReload = 0;
     ALuint bufHurt = 0;
     ALuint bufClickReload = 0;
     ALuint bufKill = 0;
@@ -36,24 +34,18 @@ struct AudioSystem {
     ALuint bufMonsterSpot = 0;
 
     ALuint bufBreath = 0;
-    ALuint bufGrunt = 0;
 
     ALuint bufEnemy = 0;
     ALuint bufEnemyScream = 0;
 
     // Sources
     ALuint srcAmbient = 0;
-    ALuint srcShot = 0;
     ALuint srcStep = 0;
-    ALuint srcReload = 0;
     ALuint srcHurt = 0;
     ALuint srcClickReload = 0;
     ALuint srcKill = 0;
 
     ALuint srcBreath = 0;
-
-    ALuint srcGrunt = 0;
-    int shotsSinceGrunt = 0;
 
     bool stepPlaying = false;
 
@@ -83,12 +75,7 @@ void audioUpdate(
 );
 
 // SFX diretos disparados por gameplay
-void audioPlayShot(AudioSystem& a);
-void audioPlayReload(AudioSystem& a);
 void audioPlayPumpClick(AudioSystem& a);
 void audioPlayHurt(AudioSystem& a);
 void audioPlayKillAt(AudioSystem& a, float x, float z);
 void audioPlayBatteryPickup(AudioSystem& a);
-
-// Utilitário (se você quiser tocar "grunhido" a cada N tiros)
-void audioOnPlayerShot(AudioSystem& a);

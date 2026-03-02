@@ -90,15 +90,6 @@ bool loadLevel(Level &lvl, const char *mapPath, float tileSize)
                 i.respawnTimer = 0.0f;
                 lvl.items.push_back(i);
             }
-             else if (c == 'A') // Ammo (Munição)
-            {
-                Item i;
-                i.x = wx;
-                i.z = wz;
-                i.type = ITEM_AMMO;
-                i.active = true;
-                lvl.items.push_back(i);
-            }
             else if (c == 'V') // Bateria (Luzes Apagadas)
             {
                 Item i;
@@ -107,6 +98,17 @@ bool loadLevel(Level &lvl, const char *mapPath, float tileSize)
                 i.type = ITEM_BATTERY;
                 i.active = true;
                 i.respawnTimer = 0.0f;
+                lvl.items.push_back(i);
+            }
+            else if (c == 'Y') // Chave do nivel (Luzes Apagadas)
+            {
+                Item i;
+                i.x = wx;
+                i.z = wz;
+                i.type = ITEM_KEY;
+                i.active = true;
+                i.respawnTimer = 0.0f;
+                i.keyLevel = lvl.currentLevel;
                 lvl.items.push_back(i);
             }
             else if (c == 'P') // Poste de Luz

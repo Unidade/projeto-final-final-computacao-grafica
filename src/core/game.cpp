@@ -107,22 +107,14 @@ bool gameInit(const char *mapPath)
     g.r.texParedeInterna = gAssets.texParedeInterna;
     g.r.texTeto = gAssets.texTeto;
 
-    g.r.texSkydome = gAssets.texSkydome;
     g.r.texMenuBG = gAssets.texMenuBG;
-
-    gHudTex.texHudFundo = gAssets.texHudFundo;
-    gHudTex.texGunHUD = gAssets.texGunHUD;
+    g.r.texGameOver = gAssets.texGameOver;
 
     gHudTex.texLinternOn = gAssets.texLinternOn;
     gHudTex.texLinternOff = gAssets.texLinternOff;
-    gHudTex.texGunDefault = gAssets.texGunDefault;
-    gHudTex.texGunFire1 = gAssets.texGunFire1;
-    gHudTex.texGunFire2 = gAssets.texGunFire2;
-    gHudTex.texGunReload1 = gAssets.texGunReload1;
-    gHudTex.texGunReload2 = gAssets.texGunReload2;
-
     gHudTex.texDamage = gAssets.texDamage;
     gHudTex.texHealthOverlay = gAssets.texHealthOverlay;
+    for (int i = 0; i < 3; i++) gHudTex.texKeyHud[i] = gAssets.texKey[i];
 
     for (int i = 0; i < 5; i++)
     {
@@ -132,8 +124,8 @@ bool gameInit(const char *mapPath)
     }
 
     g.r.texHealth = gAssets.texHealth;
-    g.r.texAmmo = gAssets.texAmmo;
     g.r.texBattery = gAssets.texBattery;
+    for (int i = 0; i < 3; i++) g.r.texKey[i] = gAssets.texKey[i];
 
     g.r.progSangue    = gAssets.progSangue;
 
@@ -170,14 +162,13 @@ bool gameInit(const char *mapPath)
 void gameReset()
 {
     g.player.health = 100;
-    g.player.currentAmmo = 12;
-    g.player.reserveAmmo = 25;
 
     g.player.damageAlpha        = 0.0f;
     g.player.healthAlpha        = 0.0f;
     g.player.batteryCharge      = 100.0f;
     g.player.darknessDamageTimer= 0.0f;
     g.player.batteriesCollected = 0;
+    for (int i = 0; i < 4; i++) g.player.hasLevelKey[i] = false;
 
     g.weapon.state = WeaponState::W_IDLE;
     g.weapon.timer = 0.0f;
@@ -266,7 +257,11 @@ void gameUpdate(float dt)
         float ddz = camZ - gLevel.doorZ;
         if (ddx * ddx + ddz * ddz < 4.0f) // within 2 units of door
         {
-            if (g.player.batteriesCollected < GameConfig::BATTERIES_REQUIRED)
+            bool hasBatteries = (g.player.batteriesCollected >= GameConfig::BATTERIES_REQUIRED);
+            int cl = gLevel.currentLevel;
+            bool hasKey = (cl >= 1 && cl <= 3 && g.player.hasLevelKey[cl]);
+
+            if (!hasBatteries || !hasKey)
             {
                 if (doorLockedSoundCooldown <= 0.0f)
                 {
@@ -274,7 +269,7 @@ void gameUpdate(float dt)
                     doorLockedSoundCooldown = 2.0f;
                 }
             }
-            else if (g.player.batteriesCollected >= GameConfig::BATTERIES_REQUIRED)
+            else if (hasBatteries && hasKey)
             {
             if (gLevel.currentLevel >= 3)
             {
@@ -350,24 +345,22 @@ void drawWorld3D()
             setPostLightEachFrame(0, 0, 0, false);
     }
 
-    // Ajuste ambient global: bem escuro para que o foco do poste seja nítido
+    // Ambient: uniforme, visível sem light posts; safe posts acrescentam luz
     {
         LightCycleState ls = lightSystemGetState(g.lightSystem);
         if (ls == LightCycleState::ON) {
-            // Escuro o suficiente para o pool do poste aparecer claramente
-            GLfloat amb[] = {0.008f, 0.008f, 0.012f, 1.0f};
+            GLfloat amb[] = {0.07f, 0.07f, 0.09f, 1.0f};
             glLightModelfv(GL_LIGHT_MODEL_AMBIENT, amb);
         } else if (ls == LightCycleState::FLICKER) {
-            // Ainda mais escuro durante aviso
-            GLfloat amb[] = {0.004f, 0.004f, 0.006f, 1.0f};
+            GLfloat amb[] = {0.05f, 0.05f, 0.07f, 1.0f};
             glLightModelfv(GL_LIGHT_MODEL_AMBIENT, amb);
-        } else { // OFF — quase nada, só lanterna salva
-            GLfloat amb[] = {0.002f, 0.002f, 0.003f, 1.0f};
+        } else {
+            GLfloat amb[] = {0.04f, 0.04f, 0.06f, 1.0f};
             glLightModelfv(GL_LIGHT_MODEL_AMBIENT, amb);
         }
     }
 
-    drawSkydome(camX, camY, camZ, g.r);
+    drawSkydome(camX, camY, camZ);
     drawLevel(gLevel.map, camX, camZ, dirX, dirZ, g.r, g.time);
     drawEntities(gLevel.enemies, gLevel.items, camX, camZ, dirX, dirZ, g.r);
     drawLightPosts(gLevel.posts, camX, camZ, dirX, dirZ);
@@ -381,25 +374,24 @@ void gameRender()
     // Monta o estado do HUD a partir das variáveis globais do jogo
     HudState hs;
     hs.playerHealth = g.player.health;
-    hs.currentAmmo = g.player.currentAmmo;
-    hs.reserveAmmo = g.player.reserveAmmo;
     hs.batteriesCollected = g.player.batteriesCollected;
     hs.batteriesRequired = GameConfig::BATTERIES_REQUIRED;
+    int cl = gLevel.currentLevel;
+    hs.currentLevel = cl;
+    hs.hasLevelKey = (cl >= 1 && cl <= 3) && g.player.hasLevelKey[cl];
     hs.damageAlpha = g.player.damageAlpha;
     hs.healthAlpha = g.player.healthAlpha;
-    hs.weaponState = g.weapon.state;
     hs.flashlightOn = g.flashlightOn;
 
     // --- ESTADO: MENU INICIAL ---
     if (g.state == GameState::MENU_INICIAL)
     {
-        menuRender(janelaW, janelaH, g.time, "", "Pressione ENTER para Jogar", g.r);
+        menuRender(janelaW, janelaH, g.time, "", "Pressione ENTER para Iniciar", g.r);
     }
     // --- ESTADO: GAME OVER ---
     else if (g.state == GameState::GAME_OVER)
     {
-        drawWorld3D();
-        menuRender(janelaW, janelaH, g.time, "GAME OVER", "Pressione ENTER para Reiniciar", g.r);
+        menuRenderGameOver(janelaW, janelaH, g.time, g.r);
     }
     // --- ESTADO: VITORIA ---
     else if (g.state == GameState::VITORIA)
@@ -412,7 +404,7 @@ void gameRender()
     {
         drawWorld3D();
         hudRenderAll(janelaW, janelaH, gHudTex, hs, true, true, true);
-        pauseMenuRender(janelaW, janelaH, g.time);
+        pauseMenuRender(janelaW, janelaH, g.time, g.r);
     }
     // --- ESTADO: JOGANDO ---
     else

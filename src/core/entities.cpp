@@ -165,16 +165,19 @@ void updateEntities(float dt)
                 if (g.player.health > 100) g.player.health = 100;
                 g.player.healthAlpha = 1.0f;
             }
-            else if (item.type == ITEM_AMMO)
-            {
-                item.respawnTimer = 999999.0f;
-                g.player.reserveAmmo = 20;
-            }
             else if (item.type == ITEM_BATTERY)
             {
                 item.respawnTimer = 999999.0f;
                 g.player.batteriesCollected++;
                 audioPlayBatteryPickup(audio);
+            }
+            else if (item.type == ITEM_KEY)
+            {
+                item.respawnTimer = 999999.0f;
+                int lvlIdx = lvl.currentLevel;
+                if (lvlIdx >= 1 && lvlIdx <= 3)
+                    g.player.hasLevelKey[lvlIdx] = true;
+                audioPlayBatteryPickup(audio); // reuse pickup sound
             }
         }
     }

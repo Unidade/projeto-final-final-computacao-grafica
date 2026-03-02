@@ -267,7 +267,7 @@ void menuRender(int screenW, int screenH, float tempo,
     // Se quiser “escurecer” um pouco pra destacar o texto:
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glColor4f(0, 0, 0, 0.25f);
+    glColor4f(0, 0, 0, 0.12f);
     glBegin(GL_QUADS);
     glVertex2f(0, 0);
     glVertex2f((float)screenW, 0);
@@ -320,10 +320,9 @@ void menuRender(int screenW, int screenH, float tempo,
     float xSub = (screenW - subW) / 2.0f;
     float ySub = (screenH / 2.0f) - 90.0f;
 
-    if ((int)(tempo * 3) % 2 == 0)
-        glColor3f(1, 1, 1);
-    else
-        glColor3f(1, 1, 0);
+    // Luzes Apagadas: gentle pulse for "Press Enter" (smooth sine instead of hard blink)
+    float pulse = 0.5f + 0.5f * std::sin(tempo * 4.0f);
+    glColor3f(1.0f, 0.95f, 0.7f + 0.3f * pulse);
 
     glLineWidth(3.0f);
     glPushMatrix();
@@ -349,13 +348,60 @@ void menuRender(int screenW, int screenH, float tempo,
     glPopAttrib();
 }
 
-void pauseMenuRender(int screenW, int screenH, float tempo)
+void menuRenderGameOver(int screenW, int screenH, float tempo, const RenderAssets &a)
+{
+    GLuint tex = a.texGameOver ? a.texGameOver : a.texMenuBG;
+    if (tex == 0) return;
+
+    glPushAttrib(GL_ALL_ATTRIB_BITS);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_LIGHTING);
+    glDisable(GL_FOG);
+    glDisable(GL_CULL_FACE);
+
+    begin2D(screenW, screenH);
+
+    drawTexturedFullscreen(screenW, screenH, tex);
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glColor4f(0, 0, 0, 0.08f);
+    glBegin(GL_QUADS);
+    glVertex2f(0, 0);
+    glVertex2f((float)screenW, 0);
+    glVertex2f((float)screenW, (float)screenH);
+    glVertex2f(0, (float)screenH);
+    glEnd();
+    glDisable(GL_BLEND);
+
+    // "FIM DE JOGO" is in the image; we add "Pressione ENTER para Reiniciar" as subtitle
+    const char *sub = "Pressione ENTER para Reiniciar";
+    float scaleSub = 0.22f;
+    float subW = 0.0f;
+    for (const char *p = sub; *p; ++p)
+        subW += glutStrokeWidth(GLUT_STROKE_ROMAN, *p);
+    subW *= scaleSub;
+
+    float xSub = (screenW - subW) / 2.0f;
+    float ySub = (screenH / 2.0f) - 90.0f;
+
+    float pulse = 0.5f + 0.5f * std::sin(tempo * 4.0f);
+    glColor3f(1.0f, 0.9f, 0.65f + 0.35f * pulse);
+    glLineWidth(3.0f);
+    glPushMatrix();
+    glTranslatef(xSub, ySub, 0);
+    glScalef(scaleSub, scaleSub, 1);
+    for (const char *p = sub; *p; ++p)
+        glutStrokeCharacter(GLUT_STROKE_ROMAN, *p);
+    glPopMatrix();
+
+    end2D();
+    glPopAttrib();
+}
+
+void pauseMenuRender(int screenW, int screenH, float tempo, const RenderAssets &a)
 {
     glPushAttrib(GL_ALL_ATTRIB_BITS);
-
-    glUseProgram(0);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    glDisable(GL_TEXTURE_2D);
 
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_LIGHTING);
@@ -367,8 +413,24 @@ void pauseMenuRender(int screenW, int screenH, float tempo)
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    // 1) filtro avermelhado (em vez de preto)
-    glColor4f(0.35f, 0.00f, 0.00f, 0.35f); // vermelho escuro transparente
+    // 1) Menu overlay: background image (same as main menu) for cohesive pause screen
+    if (a.texMenuBG)
+    {
+        glEnable(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, a.texMenuBG);
+        glColor4f(1, 1, 1, 0.85f);
+        glBegin(GL_QUADS);
+        glTexCoord2f(0, 1); glVertex2f(0, 0);
+        glTexCoord2f(1, 1); glVertex2f((float)screenW, 0);
+        glTexCoord2f(1, 0); glVertex2f((float)screenW, (float)screenH);
+        glTexCoord2f(0, 0); glVertex2f(0, (float)screenH);
+        glEnd();
+        glBindTexture(GL_TEXTURE_2D, 0);
+        glDisable(GL_TEXTURE_2D);
+    }
+
+    // 2) Dark overlay to dim the background and focus on "PAUSADO"
+    glColor4f(0.0f, 0.0f, 0.0f, 0.65f);
     glBegin(GL_QUADS);
     glVertex2f(0, 0);
     glVertex2f((float)screenW, 0);
@@ -376,7 +438,7 @@ void pauseMenuRender(int screenW, int screenH, float tempo)
     glVertex2f(0, (float)screenH);
     glEnd();
 
-    // 2) vinheta (bordas mais escuras)
+    // 3) Vinheta (bordas mais escuras)
     float m = 70.0f; // largura da borda
     glBegin(GL_QUADS);
 
@@ -414,7 +476,7 @@ void pauseMenuRender(int screenW, int screenH, float tempo)
 
     glEnd();
 
-    // 3) título
+    // 4) Título PAUSADO
     const char *t = "PAUSADO";
     float scale = 0.6f;
     float w = uiStrokeTextWidthScaled(t, scale);
@@ -438,7 +500,7 @@ void pauseMenuRender(int screenW, int screenH, float tempo)
     glColor3f(1, 1, 1);
     uiDrawStrokeText(x, y, t, scale);
 
-    // 4) subtítulo
+    // 5) Subtítulo
     const char *sub = "Pressione P para Voltar";
     float scaleSub = 0.22f;
     float wSub = uiStrokeTextWidthScaled(sub, scaleSub);

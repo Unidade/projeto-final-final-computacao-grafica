@@ -2,7 +2,6 @@
 #include <GL/glew.h>
 #include <GL/glut.h>
 #include <cmath>
-#include "core/game_state.h"
 
 static inline float clampf(float x, float a, float b)
 {
@@ -16,7 +15,7 @@ static float vFromPhi(float phi, float phiMax, float vStart, float vHorizon)
     return clampf(v, 0.0f, 1.0f);
 }
 
-void drawSkydome(float camX, float camY, float camZ, const RenderAssets& r)
+void drawSkydome(float camX, float camY, float camZ)
 {
     const float R = 200.0f; // Raio do domo (Céu)
     const int slices = 64;  // Resolução horizontal
@@ -31,15 +30,11 @@ void drawSkydome(float camX, float camY, float camZ, const RenderAssets& r)
     glDisable(GL_FOG);
     glDisable(GL_CULL_FACE);
     glDisable(GL_DEPTH_TEST);
+    glDisable(GL_TEXTURE_2D); // solid color, no texture
     glDepthMask(GL_FALSE); // O céu fica no fundo de tudo
     
-    glColor3f(1.0f, 1.0f, 1.0f);
-    glActiveTexture(GL_TEXTURE0);
-    glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, r.texSkydome);
-    
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    // Dark gradient (top slightly lighter, bottom darker) - Luzes Apagadas theme
+    glColor3f(0.02f, 0.02f, 0.04f);
     
     glPushMatrix();
     glTranslatef(camX, camY, camZ); // O céu segue o jogador
@@ -67,8 +62,8 @@ void drawSkydome(float camX, float camY, float camZ, const RenderAssets& r)
             const float y1 = R * std::cos(phi1);
             const float z1 = R * std::sin(phi1) * std::sin(theta);
             
-            glTexCoord2f(s, v1); glVertex3f(x1, y1, z1);
-            glTexCoord2f(s, v0); glVertex3f(x0, y0, z0);
+            glVertex3f(x1, y1, z1);
+            glVertex3f(x0, y0, z0);
         }
         glEnd();
     }

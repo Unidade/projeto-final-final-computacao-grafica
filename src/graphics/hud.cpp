@@ -115,55 +115,37 @@ static void drawHealthOverlay(int w, int h, GLuint texHealth, float alpha)
     end2D();
 }
 
-static void drawWeaponHUD(int w, int h, const HudTextures& tex, WeaponState ws, bool flashlightOn)
+static void drawFlashlightHUD(int w, int h, const HudTextures& tex, bool flashlightOn)
 {
     GLuint currentTex = flashlightOn ? tex.texLinternOn : tex.texLinternOff;
-
-    if (currentTex == 0)
-        currentTex = tex.texGunDefault;
-
-    if (currentTex == 0)
-        return;
+    if (currentTex == 0) return;
 
     begin2D(w, h);
-
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_LIGHTING);
     glEnable(GL_TEXTURE_2D);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
     glBindTexture(GL_TEXTURE_2D, currentTex);
     glColor4f(0.85f, 0.85f, 0.82f, 1);
 
-    float gunH = h * 0.56f;
-    float gunW = gunH;
-    float x = (w - gunW) / 2.0f;
-    float y = -8.0f;
-
-    if (ws != WeaponState::W_IDLE && flashlightOn)
-    {
-        y -= 20.0f;
-        x += (float)(std::rand() % 10 - 5);
-    }
+    float iconH = h * 0.2f;
+    float iconW = iconH;
+    float x = (w - iconW) / 2.0f;
+    float y = h * 0.02f;
 
     glBegin(GL_QUADS);
     glTexCoord2f(0, 1); glVertex2f(x, y);
-    glTexCoord2f(1, 1); glVertex2f(x + gunW, y);
-    glTexCoord2f(1, 0); glVertex2f(x + gunW, y + gunH);
-    glTexCoord2f(0, 0); glVertex2f(x, y + gunH);
+    glTexCoord2f(1, 1); glVertex2f(x + iconW, y);
+    glTexCoord2f(1, 0); glVertex2f(x + iconW, y + iconH);
+    glTexCoord2f(0, 0); glVertex2f(x, y + iconH);
     glEnd();
-
     glDisable(GL_BLEND);
-
     end2D();
 }
 
-static void drawDoomBar(int w, int h, const HudTextures& tex, const HudState& s)
+static void drawStatusBar(int w, int h, const HudTextures& tex, const HudState& s)
 {
-    if (tex.texHudFundo == 0)
-        return;
-
     glPushAttrib(GL_ALL_ATTRIB_BITS);
 
     glDisable(GL_DEPTH_TEST);
@@ -174,23 +156,18 @@ static void drawDoomBar(int w, int h, const HudTextures& tex, const HudState& s)
 
     float hBar = h * 0.10f;
 
-    // Fundo (tile)
-    glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, tex.texHudFundo);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-    float repeticaoX = 6.0f;
-    float repeticaoY = 1.0f;
-
-    glColor3f(1, 1, 1);
-    glBegin(GL_QUADS);
-    glTexCoord2f(0, 0);                 glVertex2f(0, 0);
-    glTexCoord2f(repeticaoX, 0);         glVertex2f((float)w, 0);
-    glTexCoord2f(repeticaoX, repeticaoY);glVertex2f((float)w, hBar);
-    glTexCoord2f(0, repeticaoY);         glVertex2f(0, hBar);
-    glEnd();
+    // Fundo sólido (sem textura Doom)
     glDisable(GL_TEXTURE_2D);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glColor4f(0.12f, 0.10f, 0.10f, 0.92f);
+    glBegin(GL_QUADS);
+    glVertex2f(0, 0);
+    glVertex2f((float)w, 0);
+    glVertex2f((float)w, hBar);
+    glVertex2f(0, hBar);
+    glEnd();
+    glDisable(GL_BLEND);
 
     // bordas
     glLineWidth(3.0f);
@@ -240,53 +217,6 @@ static void drawDoomBar(int w, int h, const HudTextures& tex, const HudState& s)
     glVertex2f(barX, barY + barH);
     glEnd();
 
-    // arma ícone
-    if (tex.texGunHUD != 0)
-    {
-        glEnable(GL_TEXTURE_2D);
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        glColor3f(1, 1, 1);
-
-        float iconSize = hBar * 1.5f;
-        float iconY = (hBar - iconSize) / 2.0f + (hBar * 0.1f);
-
-        glBindTexture(GL_TEXTURE_2D, tex.texGunHUD);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-        float weaponWidth = iconSize * 2.2f;
-        float xIconGun = (w * 0.75f) - (weaponWidth / 2.0f);
-
-        glBegin(GL_QUADS);
-        glTexCoord2f(0, 1); glVertex2f(xIconGun, iconY);
-        glTexCoord2f(1, 1); glVertex2f(xIconGun + weaponWidth, iconY);
-        glTexCoord2f(1, 0); glVertex2f(xIconGun + weaponWidth, iconY + iconSize);
-        glTexCoord2f(0, 0); glVertex2f(xIconGun, iconY + iconSize);
-        glEnd();
-
-        glDisable(GL_BLEND);
-        glDisable(GL_TEXTURE_2D);
-
-        // AMMO número + label
-        float xAmmoBlock = xIconGun + weaponWidth + 10.0f;
-        float yNum = hBar * 0.50f;
-        float xNum = xAmmoBlock + 5.0f;
-
-        glColor3fv(colNum);
-        glPushMatrix();
-        glTranslatef(xNum, yNum, 0);
-        glScalef(scaleNum, scaleNum, 1);
-        {
-            std::string sAmmo = std::to_string(s.currentAmmo);
-            for (char c : sAmmo) glutStrokeCharacter(GLUT_STROKE_MONO_ROMAN, c);
-        }
-        glPopMatrix();
-
-        glColor3fv(colLbl);
-        uiDrawStrokeText(xAmmoBlock, hBar * 0.20f, "AMMO", scaleLbl);
-    }
-
     // Luzes Apagadas: battery count
     float xBattery = w * 0.52f;
     glColor3fv(colLbl);
@@ -301,6 +231,35 @@ static void drawDoomBar(int w, int h, const HudTextures& tex, const HudState& s)
     }
     glPopMatrix();
 
+    // Key icon (collected/not)
+    float xKey = w * 0.68f;
+    glColor3fv(colLbl);
+    uiDrawStrokeText(xKey, hBar * 0.20f, "CHAVE", scaleLbl);
+    int kl = (s.currentLevel >= 1 && s.currentLevel <= 3) ? (s.currentLevel - 1) : 0;
+    GLuint keyTex = tex.texKeyHud[kl];
+    if (keyTex && s.hasLevelKey)
+    {
+        glEnable(GL_TEXTURE_2D);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glBindTexture(GL_TEXTURE_2D, keyTex);
+        glColor3f(1, 1, 1);
+        float kw = hBar * 1.2f;
+        glBegin(GL_QUADS);
+        glTexCoord2f(0, 1); glVertex2f(xKey, hBar * 0.25f);
+        glTexCoord2f(1, 1); glVertex2f(xKey + kw, hBar * 0.25f);
+        glTexCoord2f(1, 0); glVertex2f(xKey + kw, hBar * 0.25f + kw);
+        glTexCoord2f(0, 0); glVertex2f(xKey, hBar * 0.25f + kw);
+        glEnd();
+        glDisable(GL_BLEND);
+        glDisable(GL_TEXTURE_2D);
+    }
+    else
+    {
+        glColor3f(0.4f, 0.4f, 0.4f);
+        uiDrawStrokeText(xKey + 2.0f, hBar * 0.50f, "?", scaleNum);
+    }
+
     end2D();
     glPopAttrib();
 }
@@ -312,11 +271,11 @@ void hudRenderAll(
     const HudState& state,
     bool showCrosshair,
     bool showWeapon,
-    bool showDoomBar)
+    bool showStatusBar)
 {
-    // Ordem: arma -> barra -> mira -> overlays
-    if (showWeapon)  drawWeaponHUD(screenW, screenH, tex, state.weaponState, state.flashlightOn);
-    if (showDoomBar) drawDoomBar(screenW, screenH, tex, state);
+    // Ordem: flashlight -> barra -> mira -> overlays (gun removed)
+    if (showWeapon)  drawFlashlightHUD(screenW, screenH, tex, state.flashlightOn);
+    if (showStatusBar) drawStatusBar(screenW, screenH, tex, state);
 
     if (showCrosshair) drawCrosshair(screenW, screenH);
 
