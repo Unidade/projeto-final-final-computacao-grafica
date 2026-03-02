@@ -134,42 +134,59 @@ target_link_libraries(${PROJECT_NAME}
     ${OPENAL_LIBRARY}
 )
 
-# Windows-specific: copy DLLs to output directory
+# Windows-specific settings
 if(WIN32)
-    # Find and copy GLEW DLL
-    if(GLEW_LIBRARY)
-        get_filename_component(GLEW_DIR ${GLEW_LIBRARY} DIRECTORY)
-        file(GLOB GLEW_DLL "${GLEW_DIR}/glew32.dll")
-        if(GLEW_DLL)
-            add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                    ${GLEW_DLL} $<TARGET_FILE_DIR:${PROJECT_NAME}>
-            )
-        endif()
+    # Set Windows subsystem but keep console for debugging
+    # Use WIN32 only for release if you don't want console window
+    # set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -mwindows")
+    
+    # MSYS2 mingw64 DLL location
+    set(MINGW_BIN_DIR "C:/msys64/mingw64/bin")
+    
+    # Copy GLEW DLL
+    if(EXISTS "${MINGW_BIN_DIR}/glew32.dll")
+        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${MINGW_BIN_DIR}/glew32.dll" $<TARGET_FILE_DIR:${PROJECT_NAME}>
+        )
     endif()
     
-    # Find and copy GLUT DLL
-    if(GLUT_LIBRARY)
-        get_filename_component(GLUT_DIR ${GLUT_LIBRARY} DIRECTORY)
-        file(GLOB GLUT_DLL "${GLUT_DIR}/freeglut.dll" "${GLUT_DIR}/glut32.dll")
-        if(GLUT_DLL)
-            add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                    ${GLUT_DLL} $<TARGET_FILE_DIR:${PROJECT_NAME}>
-            )
-        endif()
+    # Copy GLUT DLL (mingw64 uses libfreeglut.dll)
+    if(EXISTS "${MINGW_BIN_DIR}/libfreeglut.dll")
+        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${MINGW_BIN_DIR}/libfreeglut.dll" $<TARGET_FILE_DIR:${PROJECT_NAME}>
+        )
     endif()
     
-    # Find and copy OpenAL DLL
-    if(OPENAL_LIBRARY)
-        get_filename_component(OPENAL_DIR ${OPENAL_LIBRARY} DIRECTORY)
-        file(GLOB OPENAL_DLL "${OPENAL_DIR}/OpenAL32.dll" "${OPENAL_DIR}/openal.dll")
-        if(OPENAL_DLL)
-            add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                    ${OPENAL_DLL} $<TARGET_FILE_DIR:${PROJECT_NAME}>
-            )
-        endif()
+    # Copy OpenAL DLL (mingw64 uses libopenal-1.dll)
+    if(EXISTS "${MINGW_BIN_DIR}/libopenal-1.dll")
+        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${MINGW_BIN_DIR}/libopenal-1.dll" $<TARGET_FILE_DIR:${PROJECT_NAME}>
+        )
+    endif()
+    
+    # Additional Windows system DLLs that might be needed
+    if(EXISTS "${MINGW_BIN_DIR}/libgcc_s_seh-1.dll")
+        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${MINGW_BIN_DIR}/libgcc_s_seh-1.dll" $<TARGET_FILE_DIR:${PROJECT_NAME}>
+        )
+    endif()
+    
+    if(EXISTS "${MINGW_BIN_DIR}/libstdc++-6.dll")
+        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${MINGW_BIN_DIR}/libstdc++-6.dll" $<TARGET_FILE_DIR:${PROJECT_NAME}>
+        )
+    endif()
+    
+    if(EXISTS "${MINGW_BIN_DIR}/libwinpthread-1.dll")
+        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${MINGW_BIN_DIR}/libwinpthread-1.dll" $<TARGET_FILE_DIR:${PROJECT_NAME}>
+        )
     endif()
 endif()
 

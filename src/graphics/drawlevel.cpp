@@ -2,6 +2,7 @@
 #include <GL/glut.h>
 #include <cmath>
 #include "core/game_state.h"
+#include "core/avatarEnemy.h"
 #include "graphics/drawlevel.h"
 #include "level/levelmetrics.h"
 #include "utils/utils.h"
@@ -165,9 +166,9 @@ static void desenhaQuadTeto(float x, float z, float tile, float tilesUV)
 // por tile tornam qualquer spotlight invisível.
 static void desenhaQuadChao(float x, float z, float tile, float tilesUV)
 {
-    const int N = 8;             // subdivisões por lado (81 vértices por tile)
-    float half  = tile * 0.5f;
-    float step  = tile / N;
+    const int N = 8; // subdivisões por lado (81 vértices por tile)
+    float half = tile * 0.5f;
+    float step = tile / N;
     float uvStp = tilesUV / N;
 
     glNormal3f(0.0f, 1.0f, 0.0f);
@@ -176,21 +177,25 @@ static void desenhaQuadChao(float x, float z, float tile, float tilesUV)
     {
         for (int xi = 0; xi < N; xi++)
         {
-            float x0 = (x - half) + xi       * step;
+            float x0 = (x - half) + xi * step;
             float x1 = (x - half) + (xi + 1) * step;
-            float z0 = (z - half) + zi       * step;
+            float z0 = (z - half) + zi * step;
             float z1 = (z - half) + (zi + 1) * step;
 
-            float u0 = xi       * uvStp;
+            float u0 = xi * uvStp;
             float u1 = (xi + 1) * uvStp;
-            float v0 = zi       * uvStp;
+            float v0 = zi * uvStp;
             float v1 = (zi + 1) * uvStp;
 
             glBegin(GL_QUADS);
-            glTexCoord2f(u0, v1);  glVertex3f(x0, EPS_Y, z1);
-            glTexCoord2f(u1, v1);  glVertex3f(x1, EPS_Y, z1);
-            glTexCoord2f(u1, v0);  glVertex3f(x1, EPS_Y, z0);
-            glTexCoord2f(u0, v0);  glVertex3f(x0, EPS_Y, z0);
+            glTexCoord2f(u0, v1);
+            glVertex3f(x0, EPS_Y, z1);
+            glTexCoord2f(u1, v1);
+            glVertex3f(x1, EPS_Y, z1);
+            glTexCoord2f(u1, v0);
+            glVertex3f(x1, EPS_Y, z0);
+            glTexCoord2f(u0, v0);
+            glVertex3f(x0, EPS_Y, z0);
             glEnd();
         }
     }
@@ -539,7 +544,7 @@ void drawEntities(const std::vector<Enemy> &enemies, const std::vector<Item> &it
             drawSprite(item.x, item.z, 0.7f, 0.7f, r.texAmmo, camX, camZ);
     }
 
-    // --- INIMIGOS ---
+    // --- INIMIGOS (todos são 3D Avatar) ---
     for (const auto &en : enemies)
     {
         if (en.state == STATE_DEAD)
@@ -548,17 +553,16 @@ void drawEntities(const std::vector<Enemy> &enemies, const std::vector<Item> &it
         if (!isVisibleXZ(en.x, en.z, camX, camZ, hasFwd, fwdx, fwdz))
             continue;
 
-        int t = (en.type < 0 || en.type > 4) ? 0 : en.type;
+        // Todos os inimigos são renderizados como Avatar 3D (GLB)
+        AvatarEnemyInstance inst;
+        inst.x = en.x;
+        inst.z = en.z;
+        inst.hurtTimer = en.hurtTimer;
+        inst.active = true;
 
-        GLuint currentTex;
-        if (en.hurtTimer > 0.0f)
-            currentTex = r.texEnemiesDamage[t];
-        else if (en.state == STATE_CHASE || en.state == STATE_ATTACK)
-            currentTex = r.texEnemiesRage[t];
-        else
-            currentTex = r.texEnemies[t];
+        inst.rot_y = AvatarSystem::lookAtRotation(en.x, en.z, camX, camZ);
 
-        drawSprite(en.x, en.z, 2.5f, 2.5f, currentTex, camX, camZ);
+        AvatarSystem::renderInstance(inst);
     }
 
     glEnable(GL_LIGHTING);
@@ -568,7 +572,7 @@ void drawEntities(const std::vector<Enemy> &enemies, const std::vector<Item> &it
 // ---------------------------------------------------------------------------
 // Desenha postes de luz como pilar + esfera no topo
 // ---------------------------------------------------------------------------
-void drawLightPosts(const std::vector<LightPost>& posts,
+void drawLightPosts(const std::vector<LightPost> &posts,
                     float camX, float camZ, float dx, float dz)
 {
     float fwdx, fwdz;
@@ -578,12 +582,12 @@ void drawLightPosts(const std::vector<LightPost>& posts,
     glDisable(GL_LIGHTING);
 
     // aperção do cone visual: deve bater com GL_SPOT_CUTOFF
-    const float CONE_DEG  = 55.0f;
-    const float PI        = 3.14159265f;
-    const float coneRad   = tanf(CONE_DEG * PI / 180.0f) * CEILING_H;
-    const int   CONE_SEGS = 24;
+    const float CONE_DEG = 55.0f;
+    const float PI = 3.14159265f;
+    const float coneRad = tanf(CONE_DEG * PI / 180.0f) * CEILING_H;
+    const int CONE_SEGS = 24;
 
-    for (const auto& p : posts)
+    for (const auto &p : posts)
     {
         if (!isVisibleXZ(p.x, p.z, camX, camZ, hasFwd, fwdx, fwdz))
             continue;
@@ -599,7 +603,7 @@ void drawLightPosts(const std::vector<LightPost>& posts,
             glDepthMask(GL_FALSE); // não escreve no z-buffer (transparente)
 
             float alpha = 0.10f * p.intensity; // levemente visível
-            float apex  = CEILING_H - 0.15f;   // topo na lâmpada
+            float apex = CEILING_H - 0.15f;    // topo na lâmpada
 
             // Faces laterais: TRIANGLE_FAN do ápice para a borda do círculo base
             glBegin(GL_TRIANGLE_FAN);
@@ -610,8 +614,8 @@ void drawLightPosts(const std::vector<LightPost>& posts,
             for (int i = 0; i <= CONE_SEGS; i++)
             {
                 float ang = i * 2.0f * PI / CONE_SEGS;
-                float bx  = cosf(ang) * coneRad;
-                float bz  = sinf(ang) * coneRad;
+                float bx = cosf(ang) * coneRad;
+                float bz = sinf(ang) * coneRad;
                 // Borda mais transparente que o ápice
                 glColor4f(1.0f, 0.95f, 0.5f, 0.0f);
                 glVertex3f(bx, 0.02f, bz); // ligeiramente acima do chão
@@ -624,10 +628,13 @@ void drawLightPosts(const std::vector<LightPost>& posts,
 
         // -------- PILAR: do chão até o teto --------
         float pillarH = CEILING_H - 0.05f;
-        if (p.active && p.intensity > 0.05f) {
+        if (p.active && p.intensity > 0.05f)
+        {
             float v = 0.5f + 0.4f * p.intensity;
             glColor3f(v * 0.55f, v * 0.50f, v * 0.20f);
-        } else {
+        }
+        else
+        {
             glColor3f(0.15f, 0.15f, 0.15f);
         }
         glPushMatrix();
@@ -637,10 +644,13 @@ void drawLightPosts(const std::vector<LightPost>& posts,
         glPopMatrix();
 
         // -------- LÂMPADA COLADA NO TETO --------
-        if (p.active && p.intensity > 0.05f) {
+        if (p.active && p.intensity > 0.05f)
+        {
             float v = p.intensity;
             glColor3f(1.0f * v, 0.96f * v, 0.65f * v);
-        } else {
+        }
+        else
+        {
             glColor3f(0.06f, 0.06f, 0.06f);
         }
         glPushMatrix();
@@ -672,29 +682,29 @@ void setPostLightEachFrame(float postX, float postZ, float intensity, bool enabl
     glEnable(GL_LIGHT3);
 
     // Posição exatamente no teto
-    GLfloat pos[]  = { postX, CEILING_H - 0.05f, postZ, 1.0f };
+    GLfloat pos[] = {postX, CEILING_H - 0.05f, postZ, 1.0f};
 
     // Cor quente e intensa; sem ambient (luz focada
-    GLfloat diff[] = { 3.5f * intensity, 3.2f * intensity, 2.0f * intensity, 1.0f };
-    GLfloat amb[]  = { 0.0f, 0.0f, 0.0f, 1.0f };
-    GLfloat spec[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+    GLfloat diff[] = {3.5f * intensity, 3.2f * intensity, 2.0f * intensity, 1.0f};
+    GLfloat amb[] = {0.0f, 0.0f, 0.0f, 1.0f};
+    GLfloat spec[] = {0.0f, 0.0f, 0.0f, 1.0f};
 
     // Spotlight reto para baixo
-    GLfloat dir[]  = { 0.0f, -1.0f, 0.0f };
+    GLfloat dir[] = {0.0f, -1.0f, 0.0f};
 
-    glLightfv(GL_LIGHT3, GL_POSITION,       pos);
-    glLightfv(GL_LIGHT3, GL_DIFFUSE,        diff);
-    glLightfv(GL_LIGHT3, GL_AMBIENT,        amb);
-    glLightfv(GL_LIGHT3, GL_SPECULAR,       spec);
+    glLightfv(GL_LIGHT3, GL_POSITION, pos);
+    glLightfv(GL_LIGHT3, GL_DIFFUSE, diff);
+    glLightfv(GL_LIGHT3, GL_AMBIENT, amb);
+    glLightfv(GL_LIGHT3, GL_SPECULAR, spec);
     glLightfv(GL_LIGHT3, GL_SPOT_DIRECTION, dir);
 
     // 55° de abertura → raio no chão ≈ tan(55°) * 2.75 ≈ 3.9 unidades (~1 tile)
-    glLightf(GL_LIGHT3, GL_SPOT_CUTOFF,   55.0f);
+    glLightf(GL_LIGHT3, GL_SPOT_CUTOFF, 55.0f);
     // Expoente 48: borda definida mas condizente com o cone maior
     glLightf(GL_LIGHT3, GL_SPOT_EXPONENT, 48.0f);
 
     // Sem atenuação por distância — o cone já delimita o foco
-    glLightf(GL_LIGHT3, GL_CONSTANT_ATTENUATION,  1.0f);
-    glLightf(GL_LIGHT3, GL_LINEAR_ATTENUATION,    0.0f);
+    glLightf(GL_LIGHT3, GL_CONSTANT_ATTENUATION, 1.0f);
+    glLightf(GL_LIGHT3, GL_LINEAR_ATTENUATION, 0.0f);
     glLightf(GL_LIGHT3, GL_QUADRATIC_ATTENUATION, 0.0f);
 }

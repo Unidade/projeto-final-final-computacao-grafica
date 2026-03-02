@@ -32,6 +32,7 @@
 #include "core/config.h"
 
 #include "core/window.h"
+#include "core/avatarEnemy.h"
 
 #include <GL/glew.h>
 #include <GL/glut.h>
@@ -135,6 +136,12 @@ bool gameInit(const char *mapPath)
 
     g.r.progSangue = gAssets.progSangue;
     g.r.progLava = gAssets.progLava;
+
+    // Carrega o modelo 3D do inimigo avatar (GLB)
+    if (!AvatarSystem::loadModel("assets/enemies/inimigo_fase.glb"))
+    {
+        printf("[Game] Warning: Could not load avatar enemy model. Avatar enemies will not be rendered.\n");
+    }
 
     if (!loadLevel(gLevel, mapPath, GameConfig::TILE_SIZE))
         return false;

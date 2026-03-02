@@ -1,6 +1,7 @@
 #include "level/level.h"
 #include "core/config.h"
 #include "core/lightpost.h"
+#include "core/avatarEnemy.h"
 #include <cstdio>
 
 // Configurações básicas para spawn
@@ -45,7 +46,7 @@ bool loadLevel(Level &lvl, const char *mapPath, float tileSize)
             float wx, wz;
             lvl.metrics.tileCenter(x, z, wx, wz);
 
-            // --- ALTERAÇÃO AQUI: Lógica para múltiplos inimigos (E, F, G) ---
+            // --- Lógica para inimigos (todos são 3D Avatar GLB) ---
             int enemyType = -1; // -1 significa "não é inimigo"
 
             if (c == 'J') enemyType = 0;      // Inimigo Tipo 1
@@ -57,12 +58,13 @@ bool loadLevel(Level &lvl, const char *mapPath, float tileSize)
             if (enemyType != -1) // Se achou qualquer um dos inimigos
             {
                 Enemy e;
-                e.type = enemyType; // <--- IMPORTANTE: Define qual a skin dele (0, 1 ou 2)
+                e.type = enemyType;
+                e.isAvatar = true;  // TODOS os inimigos são avatar 3D
 
                 e.x = wx;
                 e.z = wz;
 
-                // NOVO: Salva a posição inicial e zera timer
+                // Salva a posição inicial e zera timer
                 e.startX = wx; 
                 e.startZ = wz;
                 e.respawnTimer = 0.0f;
@@ -72,7 +74,7 @@ bool loadLevel(Level &lvl, const char *mapPath, float tileSize)
                 e.animFrame = 0;
                 e.animTimer = 0;
                 e.hurtTimer = 0.0f;
-                e.attackCooldown = 0.0f; // Garante que começa zerado
+                e.attackCooldown = 0.0f;
 
                 lvl.enemies.push_back(e);
             }
