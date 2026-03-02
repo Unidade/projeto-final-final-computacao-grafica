@@ -151,6 +151,7 @@ bool gameInit(const char *mapPath)
 
     g.state = GameState::MENU_INICIAL;
     g.time = 0.0f;
+    g.levelTime = 0.0f;
     g.player = PlayerState{};
     g.weapon = WeaponAnim{};
     g.flashlightOn = true;
@@ -173,6 +174,7 @@ void gameReset()
     g.weapon.state = WeaponState::W_IDLE;
     g.weapon.timer = 0.0f;
     g.flashlightOn = true;
+    g.levelTime = 0.0f;
 
     g.lightSystem.stateA = LightCycleState::ON;
     g.lightSystem.stateB = LightCycleState::OFF;
@@ -196,6 +198,8 @@ void gameUpdate(float dt)
     {
         return;
     }
+
+    g.levelTime += dt; // avanca apenas enquanto JOGANDO
 
     atualizaMovimento();
 
@@ -291,6 +295,7 @@ void gameUpdate(float dt)
                     g.lightSystem.stateB = LightCycleState::OFF;
                     g.lightSystem.timer = 0.0f;
                     g.lightSystem.cycleCount = 0;
+                    g.levelTime = 0.0f; // reinicia tutorial no novo nivel
                     audioInit(gAudioSys, gLevel);
                 }
             }
@@ -411,6 +416,7 @@ void gameRender()
     {
         drawWorld3D();
         hudRenderAll(janelaW, janelaH, gHudTex, hs, true, true, true);
+        desenhaTutorial(g.levelTime, janelaW, janelaH);
         menuMeltRenderOverlay(janelaW, janelaH, g.time);
     }
 

@@ -264,6 +264,85 @@ static void drawStatusBar(int w, int h, const HudTextures& tex, const HudState& 
     glPopAttrib();
 }
 
+void desenhaTutorial(float time, int w, int h)
+{
+    // Nada apos os dois paineis terem sumido
+    if (time > 12.0f)
+        return;
+
+    // --- Alpha de cada painel ---
+    // Caixa 1: visivel 0-5s, fade out 5-6s
+    float alpha1 = 0.0f;
+    if (time < 5.0f)
+        alpha1 = 1.0f;
+    else if (time < 6.0f)
+        alpha1 = 1.0f - (time - 5.0f); // 1s de fade
+
+    // Caixa 2: visivel 6-11s, fade out 11-12s
+    float alpha2 = 0.0f;
+    if (time >= 6.0f && time < 11.0f)
+        alpha2 = 1.0f;
+    else if (time >= 11.0f && time < 12.0f)
+        alpha2 = 1.0f - (time - 11.0f); // 1s de fade
+
+    if (alpha1 <= 0.0f && alpha2 <= 0.0f)
+        return;
+
+    glPushAttrib(GL_ALL_ATTRIB_BITS);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_LIGHTING);
+    glDisable(GL_TEXTURE_2D);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    begin2D(w, h);
+
+    // --- Escalas e metricas comuns ---
+    float scale1 = 0.00035f * h;
+    float scale2 = 0.00025f * h;
+    float pad    = h * 0.015f;
+    float lineH  = h * 0.030f;
+
+    // Helper: desenha uma caixa com duas linhas de texto
+    auto drawBox = [&](float alpha, const char* t1, const char* t2)
+    {
+        if (alpha <= 0.0f) return;
+
+        float t1W = uiStrokeTextWidthScaled(t1, scale1);
+        float t2W = uiStrokeTextWidthScaled(t2, scale2);
+        float bW  = (t2W > t1W ? t2W : t1W) + pad * 4.0f;
+        float bH  = lineH * 2.0f + pad * 3.0f;
+        float bx  = (w - bW) / 2.0f;
+        float by  = h * 0.75f;
+
+        // Fundo escuro
+        glColor4f(0.0f, 0.0f, 0.0f, 0.60f * alpha);
+        glBegin(GL_QUADS);
+        glVertex2f(bx,      by);      glVertex2f(bx + bW, by);
+        glVertex2f(bx + bW, by + bH); glVertex2f(bx,      by + bH);
+        glEnd();
+
+        // Linha de titulo (branco)
+        glColor4f(1.0f, 1.0f, 1.0f, alpha);
+        uiDrawStrokeText(bx + (bW - t1W) / 2.0f, by + pad + lineH * 1.2f, t1, scale1);
+
+        // Linha de detalhe (cinza claro)
+        glColor4f(0.85f, 0.85f, 0.85f, alpha);
+        uiDrawStrokeText(bx + (bW - t2W) / 2.0f, by + pad * 0.8f,         t2, scale2);
+    };
+
+    drawBox(alpha1,
+            "CUIDADO: Fique na luz!",
+            "Sair da luz atrai o monstro e voce sera atacado.");
+
+    drawBox(alpha2,
+            "OBJETIVO:",
+            "Colete as baterias e a chave, depois procure a saida.");
+
+    end2D();
+    glPopAttrib();
+}
+
 void hudRenderAll(
     int screenW,
     int screenH,

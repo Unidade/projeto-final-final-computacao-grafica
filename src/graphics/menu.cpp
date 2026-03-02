@@ -340,6 +340,7 @@ void menuRender(int screenW, int screenH, float tempo,
         g_melt.lastTempo = -1.0f;       // reseta dt do overlay
 
         // entra no jogo NO PRÓXIMO FRAME
+        gameContext().levelTime = 0.0f;
         gameSetState(GameState::JOGANDO);
     }
 

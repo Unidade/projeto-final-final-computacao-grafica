@@ -51,6 +51,7 @@ struct GameContext
     PlayerState player;
     WeaponAnim weapon;
     float time = 0.0f;
+    float levelTime = 0.0f; // zerado a cada inicio de nivel
 
     bool flashlightOn = true;
 

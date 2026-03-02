@@ -35,3 +35,5 @@ void hudRenderAll(
     bool showCrosshair,
     bool showWeapon,
     bool showStatusBar);
+
+void desenhaTutorial(float time, int w, int h);
