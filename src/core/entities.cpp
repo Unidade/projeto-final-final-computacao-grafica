@@ -1,6 +1,8 @@
 #include "core/entities.h"
 #include "core/game.h"
 #include "core/camera.h"
+#include "core/config.h"
+#include "core/light_system.h"
 #include "audio/audio_system.h"
 #include <cmath>
 
@@ -20,6 +22,7 @@ bool isWalkable(float x, float z)
     if (tx < 0 || tx >= (int)data[tz].size()) return false;
 
     char c = data[tz][tx];
+    // Walls block movement
     if (c == '1' || c == '2') return false;
 
     return true;
@@ -49,6 +52,24 @@ void updateEntities(float dt)
 
         if (en.hurtTimer > 0.0f) en.hurtTimer -= dt;
 
+        // --- LUZES APAGADAS: Enemies freeze inside safe zones ---
+        // If the enemy is inside the illuminated area of any active light post,
+        // it cannot move or attack — it stays idle.
+        bool enemyInSafeZone = isPositionInSafeZone(
+            lvl.posts, en.x, en.z, GameConfig::SAFE_ZONE_RADIUS);
+
+        if (enemyInSafeZone)
+        {
+            // Enemy is in the light — frozen, can't chase
+            en.state = STATE_IDLE;
+            continue;
+        }
+
+        // --- LUZES APAGADAS: Monster only hunts when player is in darkness ---
+        bool playerInSafeZone = playerIsInSafeZone(
+            lvl.posts, camX, camZ, GameConfig::SAFE_ZONE_RADIUS);
+        bool playerVisibleToMonster = !playerInSafeZone && !g.flashlightOn;
+
         float dx = camX - en.x;
         float dz = camZ - en.z;
         float dist = std::sqrt(dx * dx + dz * dz);
@@ -56,11 +77,15 @@ void updateEntities(float dt)
         switch (en.state)
         {
         case STATE_IDLE:
-            if (dist < ENEMY_VIEW_DIST) en.state = STATE_CHASE;
+            if (playerVisibleToMonster && dist < ENEMY_VIEW_DIST) en.state = STATE_CHASE;
             break;
 
         case STATE_CHASE:
-            if (dist < ENEMY_ATTACK_DIST)
+            if (!playerVisibleToMonster)
+            {
+                en.state = STATE_IDLE; // Player entered light — monster loses track
+            }
+            else if (dist < ENEMY_ATTACK_DIST)
             {
                 en.state = STATE_ATTACK;
                 en.attackCooldown = 0.5f;
@@ -77,15 +102,25 @@ void updateEntities(float dt)
                 float moveStep = ENEMY_SPEED * dt;
 
                 float nextX = en.x + dirX * moveStep;
-                if (isWalkable(nextX, en.z)) en.x = nextX;
-
                 float nextZ = en.z + dirZ * moveStep;
-                if (isWalkable(en.x, nextZ)) en.z = nextZ;
+
+                // Block movement into safe zones (enemies stop at light boundary)
+                bool nextInSafeZoneX = isPositionInSafeZone(
+                    lvl.posts, nextX, en.z, GameConfig::SAFE_ZONE_RADIUS);
+                bool nextInSafeZoneZ = isPositionInSafeZone(
+                    lvl.posts, en.x, nextZ, GameConfig::SAFE_ZONE_RADIUS);
+
+                if (isWalkable(nextX, en.z) && !nextInSafeZoneX) en.x = nextX;
+                if (isWalkable(en.x, nextZ) && !nextInSafeZoneZ) en.z = nextZ;
             }
             break;
 
         case STATE_ATTACK:
-            if (dist > ENEMY_ATTACK_DIST)
+            if (!playerVisibleToMonster)
+            {
+                en.state = STATE_IDLE; // Player entered light — can't attack
+            }
+            else if (dist > ENEMY_ATTACK_DIST)
             {
                 en.state = STATE_CHASE;
             }
@@ -134,6 +169,12 @@ void updateEntities(float dt)
             {
                 item.respawnTimer = 999999.0f;
                 g.player.reserveAmmo = 20;
+            }
+            else if (item.type == ITEM_BATTERY)
+            {
+                item.respawnTimer = 999999.0f;
+                g.player.batteriesCollected++;
+                audioPlayBatteryPickup(audio);
             }
         }
     }

@@ -287,6 +287,20 @@ static void drawDoomBar(int w, int h, const HudTextures& tex, const HudState& s)
         uiDrawStrokeText(xAmmoBlock, hBar * 0.20f, "AMMO", scaleLbl);
     }
 
+    // Luzes Apagadas: battery count
+    float xBattery = w * 0.52f;
+    glColor3fv(colLbl);
+    uiDrawStrokeText(xBattery, hBar * 0.20f, "BATERIAS", scaleLbl);
+    glColor3f(0.6f, 0.9f, 0.4f);
+    glPushMatrix();
+    glTranslatef(xBattery + 5.0f, hBar * 0.50f, 0);
+    glScalef(scaleNum, scaleNum, 1);
+    {
+        std::string sBat = std::to_string(s.batteriesCollected) + "/" + std::to_string(s.batteriesRequired);
+        for (char c : sBat) glutStrokeCharacter(GLUT_STROKE_MONO_ROMAN, c);
+    }
+    glPopMatrix();
+
     end2D();
     glPopAttrib();
 }

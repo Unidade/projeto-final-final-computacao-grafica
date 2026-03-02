@@ -26,6 +26,8 @@ struct HudState
     int playerHealth = 100;
     int currentAmmo = 0;
     int reserveAmmo = 0;
+    int batteriesCollected = 0;
+    int batteriesRequired = 14;
 
     float damageAlpha = 0.0f;
     float healthAlpha = 0.0f;

@@ -102,7 +102,7 @@ bool gameInit(const char *mapPath)
     g.r.texChao = gAssets.texChao;
     g.r.texParede = gAssets.texParede;
     g.r.texSangue = gAssets.texSangue;
-    g.r.texLava = gAssets.texLava;
+    g.r.texDoor = gAssets.texDoor;
     g.r.texChaoInterno = gAssets.texChaoInterno;
     g.r.texParedeInterna = gAssets.texParedeInterna;
     g.r.texTeto = gAssets.texTeto;
@@ -133,9 +133,9 @@ bool gameInit(const char *mapPath)
 
     g.r.texHealth = gAssets.texHealth;
     g.r.texAmmo = gAssets.texAmmo;
+    g.r.texBattery = gAssets.texBattery;
 
-    g.r.progSangue = gAssets.progSangue;
-    g.r.progLava = gAssets.progLava;
+    g.r.progSangue    = gAssets.progSangue;
 
     // Carrega o modelo 3D do inimigo avatar (GLB)
     if (!AvatarSystem::loadModel("assets/enemies/inimigo_fase.glb"))
@@ -166,7 +166,7 @@ bool gameInit(const char *mapPath)
     return true;
 }
 
-// Reinicia o jogo
+// Reinicia o jogo (volta ao Level 1)
 void gameReset()
 {
     g.player.health = 100;
@@ -177,16 +177,23 @@ void gameReset()
     g.player.healthAlpha        = 0.0f;
     g.player.batteryCharge      = 100.0f;
     g.player.darknessDamageTimer= 0.0f;
+    g.player.batteriesCollected = 0;
 
     g.weapon.state = WeaponState::W_IDLE;
     g.weapon.timer = 0.0f;
     g.flashlightOn = true;
 
-    g.lightSystem.state = LightCycleState::ON;
+    g.lightSystem.stateA = LightCycleState::ON;
+    g.lightSystem.stateB = LightCycleState::OFF;
     g.lightSystem.timer = 0.0f;
+    g.lightSystem.cycleCount = 0;
 
-    // Respawna o jogador
+    // Reload level 1
+    loadLevel(gLevel, "maps/level1.txt", GameConfig::TILE_SIZE);
+    gLevel.currentLevel = 1;
     applySpawn(gLevel, camX, camZ);
+    camY = GameConfig::PLAYER_EYE_Y;
+    audioInit(gAudioSys, gLevel);
 }
 
 void gameUpdate(float dt)
@@ -247,6 +254,53 @@ void gameUpdate(float dt)
     {
         g.player.batteryCharge += g.player.batteryRechargeRate * dt;
         if (g.player.batteryCharge > 100.0f) g.player.batteryCharge = 100.0f;
+    }
+
+    // --- DOOR EXIT CHECK (Luzes Apagadas: need all batteries to use elevator) ---
+    static float doorLockedSoundCooldown = 0.0f;
+    if (doorLockedSoundCooldown > 0.0f) doorLockedSoundCooldown -= dt;
+
+    if (gLevel.hasDoor)
+    {
+        float ddx = camX - gLevel.doorX;
+        float ddz = camZ - gLevel.doorZ;
+        if (ddx * ddx + ddz * ddz < 4.0f) // within 2 units of door
+        {
+            if (g.player.batteriesCollected < GameConfig::BATTERIES_REQUIRED)
+            {
+                if (doorLockedSoundCooldown <= 0.0f)
+                {
+                    audioPlayPumpClick(gAudioSys);
+                    doorLockedSoundCooldown = 2.0f;
+                }
+            }
+            else if (g.player.batteriesCollected >= GameConfig::BATTERIES_REQUIRED)
+            {
+            if (gLevel.currentLevel >= 3)
+            {
+                g.state = GameState::VITORIA; // Won the game!
+            }
+            else
+            {
+                // Load next level
+                gLevel.currentLevel++;
+                char mapPath[64];
+                std::snprintf(mapPath, sizeof(mapPath), "maps/level%d.txt", gLevel.currentLevel);
+                int savedLevel = gLevel.currentLevel;
+                if (loadLevel(gLevel, mapPath, GameConfig::TILE_SIZE))
+                {
+                    gLevel.currentLevel = savedLevel;
+                    applySpawn(gLevel, camX, camZ);
+                    camY = GameConfig::PLAYER_EYE_Y;
+                    g.lightSystem.stateA = LightCycleState::ON;
+                    g.lightSystem.stateB = LightCycleState::OFF;
+                    g.lightSystem.timer = 0.0f;
+                    g.lightSystem.cycleCount = 0;
+                    audioInit(gAudioSys, gLevel);
+                }
+            }
+            }
+        }
     }
 
     // 3. CHECAGEM DE GAME OVER
@@ -329,6 +383,8 @@ void gameRender()
     hs.playerHealth = g.player.health;
     hs.currentAmmo = g.player.currentAmmo;
     hs.reserveAmmo = g.player.reserveAmmo;
+    hs.batteriesCollected = g.player.batteriesCollected;
+    hs.batteriesRequired = GameConfig::BATTERIES_REQUIRED;
     hs.damageAlpha = g.player.damageAlpha;
     hs.healthAlpha = g.player.healthAlpha;
     hs.weaponState = g.weapon.state;
@@ -337,42 +393,32 @@ void gameRender()
     // --- ESTADO: MENU INICIAL ---
     if (g.state == GameState::MENU_INICIAL)
     {
-        // menuRender já cuida do fogo (update + render)
         menuRender(janelaW, janelaH, g.time, "", "Pressione ENTER para Jogar", g.r);
     }
     // --- ESTADO: GAME OVER ---
     else if (g.state == GameState::GAME_OVER)
     {
-        // Fundo 3D congelado
         drawWorld3D();
-
-        // OVERLAY DO MELT por cima do jogo
-        // menuMeltRenderOverlay(janelaW, janelaH, g.time);
-
-        // Tela do game over por cima (com fogo)
         menuRender(janelaW, janelaH, g.time, "GAME OVER", "Pressione ENTER para Reiniciar", g.r);
+    }
+    // --- ESTADO: VITORIA ---
+    else if (g.state == GameState::VITORIA)
+    {
+        drawWorld3D();
+        menuRender(janelaW, janelaH, g.time, "LUZES APAGADAS — VOCE ESCAPOU!", "Pressione ENTER para Jogar Novamente", g.r);
     }
     // --- ESTADO: PAUSADO ---
     else if (g.state == GameState::PAUSADO)
     {
-        // 1) Mundo 3D congelado
         drawWorld3D();
-
-        // 2) HUD normal (arma + barra + mira + overlays)
         hudRenderAll(janelaW, janelaH, gHudTex, hs, true, true, true);
-
-        // 3) Menu escuro por cima
         pauseMenuRender(janelaW, janelaH, g.time);
     }
     // --- ESTADO: JOGANDO ---
-    else // JOGANDO
+    else
     {
-        // 1) Mundo 3D
         drawWorld3D();
-
-        // 2) HUD completo
         hudRenderAll(janelaW, janelaH, gHudTex, hs, true, true, true);
-
         menuMeltRenderOverlay(janelaW, janelaH, g.time);
     }
 

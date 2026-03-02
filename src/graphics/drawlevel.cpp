@@ -14,8 +14,8 @@
 
 // Config do grid
 static const float TILE = 4.0f;      // tamanho do tile no mundo
-static const float CEILING_H = 2.8f; // teto mais baixo para spotlight mais compacto
-static const float WALL_H = 4.0f;    // altura da parede
+static const float CEILING_H = 5.0f; // teto alto para cone de luz amplo
+static const float WALL_H = 6.0f;    // parede mais alta que o teto
 static const float EPS_Y = 0.001f;   // evita z-fighting
 
 static const GLfloat kAmbientOutdoor[] = {0.04f, 0.04f, 0.06f, 1.0f}; // noite escura
@@ -24,9 +24,12 @@ static const GLfloat kAmbientIndoor[] = {0.02f, 0.02f, 0.03f, 1.0f};  // interio
 // ======================
 // CONFIG ÚNICA DO CULLING (XZ)
 // ======================
-static float gCullHFovDeg = 170.0f;     // FOV horizontal do culling (cenário + entidades)
-static float gCullNearTiles = 2.0f;     // dentro disso não faz culling angular
-static float gCullMaxDistTiles = 20.0f; // 0 = sem limite; em tiles
+static float gCullHFovDeg = 210.0f;     // FOV amplo: evitar paredes sumindo nas bordas
+static float gCullNearTiles = 3.0f;     // perto não faz culling angular
+static float gCullMaxDistTiles = 35.0f; // render mais longe — corrige paredes piscando
+
+
+
 
 // Retorna TRUE se deve renderizar o objeto no plano XZ (distância + cone de FOV)
 // - Usa as configs globais gCull*
@@ -142,23 +145,21 @@ static void endIndoor()
     glEnable(GL_LIGHT0);
 }
 
-static void desenhaQuadTeto(float x, float z, float tile, float tilesUV)
+static void desenhaQuadTeto(float x, float z, float tile, float tilesUV, GLuint texTeto)
 {
     float half = tile * 0.5f;
 
-    glBindTexture(GL_TEXTURE_2D, 0);
-    glColor3f(0.0f, 0.0f, 0.0f);
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glBindTexture(GL_TEXTURE_2D, texTeto);
 
     glBegin(GL_QUADS);
     glNormal3f(0.0f, -1.0f, 0.0f);
 
-    glVertex3f(x - half, CEILING_H, z - half);
-    glVertex3f(x + half, CEILING_H, z - half);
-    glVertex3f(x + half, CEILING_H, z + half);
-    glVertex3f(x - half, CEILING_H, z + half);
+    glTexCoord2f(0.0f, 0.0f); glVertex3f(x - half, CEILING_H, z - half);
+    glTexCoord2f(tilesUV, 0.0f); glVertex3f(x + half, CEILING_H, z - half);
+    glTexCoord2f(tilesUV, tilesUV); glVertex3f(x + half, CEILING_H, z + half);
+    glTexCoord2f(0.0f, tilesUV); glVertex3f(x - half, CEILING_H, z + half);
     glEnd();
-
-    glColor3f(1.0f, 1.0f, 1.0f);
 }
 
 // Desenha o chão subdividido em NxN para que o per-vertex lighting
@@ -201,17 +202,18 @@ static void desenhaQuadChao(float x, float z, float tile, float tilesUV)
     }
 }
 
-static void desenhaTileChao(float x, float z, GLuint texChaoX, bool temTeto)
+static void desenhaTileChao(float x, float z, GLuint texChaoX, bool /*temTeto*/, GLuint texTeto)
 {
     glUseProgram(0);
-    glColor3f(1, 1, 1);
 
+    glColor3f(1, 1, 1);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texChaoX);
 
     desenhaQuadChao(x, z, TILE, 2.0f);
 
-    desenhaQuadTeto(x, z, TILE, 2.0f);
+    glUseProgram(0);
+    desenhaQuadTeto(x, z, TILE, 2.0f, texTeto);
 }
 
 // --- Desenha parede FACE POR FACE ---
@@ -304,29 +306,31 @@ static void desenhaParedeCuboCompleto(float x, float z, GLuint texParedeX)
     glEnd();
 }
 
-static void desenhaTileLava(float x, float z, const RenderAssets &r, float time)
+// Desenha a porta de saída — um quad com textura de porta
+static void desenhaTileDoor(float x, float z, const RenderAssets &r)
 {
-    glUseProgram(r.progLava);
+    // Chão sob a porta
+    desenhaTileChao(x, z, r.texChao, false, r.texTeto);
 
-    GLint locTime = glGetUniformLocation(r.progLava, "uTime");
-    GLint locStr = glGetUniformLocation(r.progLava, "uStrength");
-    GLint locScr = glGetUniformLocation(r.progLava, "uScroll");
-    GLint locHeat = glGetUniformLocation(r.progLava, "uHeat");
-    GLint locTex = glGetUniformLocation(r.progLava, "uTexture");
-
-    glUniform1f(locTime, time);
-    glUniform1f(locStr, 1.0f);
-    glUniform2f(locScr, 0.1f, 0.0f);
-    glUniform1f(locHeat, 0.6f);
-
-    bindTexture0(r.texLava);
-    glUniform1i(locTex, 0);
-
-    glColor3f(1, 1, 1);
-    desenhaQuadChao(x, z, TILE, 2.0f);
+    // A porta em si: quad vertical no centro do tile
+    float doorW = TILE * 0.8f;
+    float doorH = WALL_H * 0.7f;
+    float hw = doorW * 0.5f;
 
     glUseProgram(0);
-    desenhaQuadTeto(x, z, TILE, 2.0f);
+    glColor3f(1, 1, 1);
+    glBindTexture(GL_TEXTURE_2D, r.texDoor);
+
+    // Desenha em ambos os lados para ser visível de qualquer direção
+    glDisable(GL_CULL_FACE);
+    glBegin(GL_QUADS);
+    glNormal3f(0, 0, 1);
+    glTexCoord2f(0, 1); glVertex3f(x - hw, 0.0f, z);
+    glTexCoord2f(1, 1); glVertex3f(x + hw, 0.0f, z);
+    glTexCoord2f(1, 0); glVertex3f(x + hw, doorH, z);
+    glTexCoord2f(0, 0); glVertex3f(x - hw, doorH, z);
+    glEnd();
+    glEnable(GL_CULL_FACE);
 }
 
 static void desenhaTileSangue(float x, float z, const RenderAssets &r, float time)
@@ -349,7 +353,7 @@ static void desenhaTileSangue(float x, float z, const RenderAssets &r, float tim
     desenhaQuadChao(x, z, TILE, 2.0f);
 
     glUseProgram(0);
-    desenhaQuadTeto(x, z, TILE, 2.0f);
+    desenhaQuadTeto(x, z, TILE, 2.0f, r.texTeto);
 }
 
 // --- Checa vizinhos ---
@@ -368,7 +372,7 @@ static char getTileAt(const MapLoader &map, int tx, int tz)
 
 static void drawFace(float wx, float wz, int face, char neighbor, GLuint texParedeInternaX, float time)
 {
-    bool outside = (neighbor == '0' || neighbor == 'L' || neighbor == 'B');
+    bool outside = (neighbor != '1' && neighbor != '2' && neighbor != '3');
 
     if (outside)
     {
@@ -410,8 +414,8 @@ void drawLevel(const MapLoader &map, float px, float pz, float dx, float dz, con
             char c = data[z][x];
 
             bool isEntity = (c == 'J' || c == 'T' || c == 'M' || c == 'K' ||
-                             c == 'G' || c == 'H' || c == 'A' || c == 'E' ||
-                             c == 'F' || c == 'I' || c == 'P');
+                             c == 'G' || c == 'H' || c == 'A' || c == 'V' ||
+                             c == 'E' || c == 'F' || c == 'I' || c == 'P' || c == 'D');
 
             if (isEntity)
             {
@@ -428,22 +432,22 @@ void drawLevel(const MapLoader &map, float px, float pz, float dx, float dz, con
                 if (isIndoor)
                 {
                     beginIndoor(wx, wz, time);
-                    desenhaTileChao(wx, wz, r.texChaoInterno, true);
+                    desenhaTileChao(wx, wz, r.texChaoInterno, true, r.texTeto);
                     endIndoor();
                 }
                 else
                 {
-                    desenhaTileChao(wx, wz, r.texChao, false);
+                    desenhaTileChao(wx, wz, r.texChao, false, r.texTeto);
                 }
             }
             else if (c == '0')
             {
-                desenhaTileChao(wx, wz, r.texChao, false);
+                desenhaTileChao(wx, wz, r.texChao, false, r.texTeto);
             }
             else if (c == '3')
             {
                 beginIndoor(wx, wz, time);
-                desenhaTileChao(wx, wz, r.texChaoInterno, true);
+                desenhaTileChao(wx, wz, r.texChaoInterno, true, r.texTeto);
                 endIndoor();
             }
             else if (c == '1')
@@ -462,9 +466,9 @@ void drawLevel(const MapLoader &map, float px, float pz, float dx, float dz, con
                 drawFace(wx, wz, 2, vizDireita, r.texParedeInterna, time);
                 drawFace(wx, wz, 3, vizEsq, r.texParedeInterna, time);
             }
-            else if (c == 'L')
+            else if (c == 'D')
             {
-                desenhaTileLava(wx, wz, r, time);
+                desenhaTileDoor(wx, wz, r);
             }
             else if (c == 'B')
             {
@@ -542,6 +546,8 @@ void drawEntities(const std::vector<Enemy> &enemies, const std::vector<Item> &it
             drawSprite(item.x, item.z, 0.7f, 0.7f, r.texHealth, camX, camZ);
         else if (item.type == ITEM_AMMO)
             drawSprite(item.x, item.z, 0.7f, 0.7f, r.texAmmo, camX, camZ);
+        else if (item.type == ITEM_BATTERY)
+            drawSprite(item.x, item.z, 0.7f, 0.7f, r.texBattery, camX, camZ);
     }
 
     // --- INIMIGOS (todos são 3D Avatar) ---
@@ -599,32 +605,63 @@ void drawLightPosts(const std::vector<LightPost> &posts,
         if (p.active && p.intensity > 0.05f)
         {
             glEnable(GL_BLEND);
+            glDepthMask(GL_FALSE);
+
+            float alpha = 0.13f * p.intensity;
+            float apex  = CEILING_H - 0.15f;
+
+            // -- Cone lateral (do teto ao chão) --
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-            glDepthMask(GL_FALSE); // não escreve no z-buffer (transparente)
-
-            float alpha = 0.10f * p.intensity; // levemente visível
-            float apex = CEILING_H - 0.15f;    // topo na lâmpada
-
-            // Faces laterais: TRIANGLE_FAN do ápice para a borda do círculo base
             glBegin(GL_TRIANGLE_FAN);
-            // Ápice (lâmpada)
-            glColor4f(1.0f, 0.96f, 0.65f, alpha * 2.0f);
+            glColor4f(1.0f, 0.96f, 0.65f, alpha * 2.2f); // ápice mais brilhante
             glVertex3f(0.0f, apex, 0.0f);
-            // Borda do círculo no chão
             for (int i = 0; i <= CONE_SEGS; i++)
             {
                 float ang = i * 2.0f * PI / CONE_SEGS;
-                float bx = cosf(ang) * coneRad;
-                float bz = sinf(ang) * coneRad;
-                // Borda mais transparente que o ápice
-                glColor4f(1.0f, 0.95f, 0.5f, 0.0f);
-                glVertex3f(bx, 0.02f, bz); // ligeiramente acima do chão
+                float bx  = cosf(ang) * coneRad;
+                float bz  = sinf(ang) * coneRad;
+                glColor4f(1.0f, 0.95f, 0.5f, 0.0f); // borda totalmente transparente
+                glVertex3f(bx, 0.02f, bz);
             }
             glEnd();
+
+            // -- Disco no chão: blending ADITIVO para parecer luz real --
+            // Brilhante no centro, fadeout até o raio exato do cone
+            glBlendFunc(GL_ONE, GL_ONE); // aditivo: soma luminosidade
+            glBegin(GL_TRIANGLE_FAN);
+            // Centro: amarelo-branco quente
+            glColor4f(0.55f * p.intensity, 0.50f * p.intensity, 0.20f * p.intensity, 1.0f);
+            glVertex3f(0.0f, 0.01f, 0.0f);
+            for (int i = 0; i <= CONE_SEGS; i++)
+            {
+                float ang = i * 2.0f * PI / CONE_SEGS;
+                float bx  = cosf(ang) * coneRad;
+                float bz  = sinf(ang) * coneRad;
+                glColor4f(0.0f, 0.0f, 0.0f, 1.0f); // borda: nenhuma contribuição
+                glVertex3f(bx, 0.01f, bz);
+            }
+            glEnd();
+
+            // -- Anel (circunferência) na borda do cone no chão --
+            // Marca visualmente o limite exato da zona iluminada
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            glLineWidth(2.0f);
+            glBegin(GL_LINE_LOOP);
+            for (int i = 0; i < CONE_SEGS; i++)
+            {
+                float ang = i * 2.0f * PI / CONE_SEGS;
+                float bx  = cosf(ang) * coneRad;
+                float bz  = sinf(ang) * coneRad;
+                glColor4f(0.9f, 0.85f, 0.4f, 0.55f * p.intensity); // anel dourado
+                glVertex3f(bx, 0.015f, bz);
+            }
+            glEnd();
+            glLineWidth(1.0f);
 
             glDepthMask(GL_TRUE);
             glDisable(GL_BLEND);
         }
+
 
         // -------- PILAR: do chão até o teto --------
         float pillarH = CEILING_H - 0.05f;

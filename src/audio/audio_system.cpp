@@ -29,57 +29,7 @@ static void play3DAt(AudioSystem& a, ALuint s, float x, float z) {
     a.engine.play(s);
 }
 
-// Checa se é lava no tile
-static bool isLavaTile(const Level& level, int tx, int tz) {
-    const auto& data = level.map.data();
-    if (tz < 0 || tz >= (int)data.size()) return false;
-    if (tx < 0 || tx >= (int)data[tz].size()) return false;
-    return data[tz][tx] == 'L';
-}
 
-// Acha lava mais próxima (busca local)
-static bool nearestLava(const Level& level, float px, float pz, float& outX, float& outZ, float& outDist) {
-    float tile = level.metrics.tile;
-    float offX = level.metrics.offsetX;
-    float offZ = level.metrics.offsetZ;
-
-    int ptx = (int)((px - offX) / tile);
-    int ptz = (int)((pz - offZ) / tile);
-
-    const int R = 10;
-    bool found = false;
-    float bestD2 = 1e30f;
-    float bestX = 0.0f, bestZ = 0.0f;
-
-    for (int dz = -R; dz <= R; ++dz) {
-        for (int dx = -R; dx <= R; ++dx) {
-            int tx = ptx + dx;
-            int tz = ptz + dz;
-            if (!isLavaTile(level, tx, tz)) continue;
-
-            float cx = offX + (tx + 0.5f) * tile;
-            float cz = offZ + (tz + 0.5f) * tile;
-
-            float ddx = cx - px;
-            float ddz = cz - pz;
-            float d2 = ddx * ddx + ddz * ddz;
-
-            if (d2 < bestD2) {
-                bestD2 = d2;
-                bestX = cx;
-                bestZ = cz;
-                found = true;
-            }
-        }
-    }
-
-    if (!found) return false;
-
-    outX = bestX;
-    outZ = bestZ;
-    outDist = std::sqrt(bestD2);
-    return true;
-}
 
 // Cria/atualiza arrays de sources de inimigos conforme quantidade no level
 static void ensureEnemySources(AudioSystem& a, const Level& level) {
@@ -118,35 +68,47 @@ static void ensureEnemyExtra(AudioSystem& a, const Level& level) {
         a.srcEnemyScreams.assign(n, 0);
         a.enemyScreamTimer.assign(n, 0.0f);
     }
-
-    if (a.enemyPrevState.size() != n) {
-        a.enemyPrevState.assign(n, 0);
+    if (a.srcEnemySpots.size() != n) {
+        for (ALuint s : a.srcEnemySpots) stopIf(s, a.engine);
+        a.srcEnemySpots.assign(n, 0);
+    }
+    if (a.srcEnemyAttacks.size() != n) {
+        for (ALuint s : a.srcEnemyAttacks) stopIf(s, a.engine);
+        a.srcEnemyAttacks.assign(n, 0);
     }
 
-    // Se temos buffer de scream, garante 1 source por inimigo
-    if (a.bufEnemyScream && a.srcEnemyScreams.size() == n) {
-        for (size_t i = 0; i < n; ++i) {
-            if (a.srcEnemyScreams[i] != 0) continue;
+    if (a.enemyPrevState.size() != n) {
+        a.enemyPrevState.assign(n, (int)STATE_IDLE);
+    }
 
-            ALuint s = a.engine.createSource(a.bufEnemyScream, false);
-            if (!s) continue;
-
-            alSourcei(s, AL_SOURCE_RELATIVE, AL_FALSE);
-            a.engine.setSourceGain(s, AudioTuning::MASTER * AudioTuning::ENEMY_SCREAM_GAIN);
-            a.engine.setSourceDistance(
-                s,
-                AudioTuning::ENEMY_REF_DIST,
-                AudioTuning::ENEMY_ROLLOFF * 0.8f,
-                AudioTuning::SCREAM_MAX_AUDIBLE_DIST
-            );
-
-            a.srcEnemyScreams[i] = s;
-
-            // agenda inicial
-            float r = frand01();
-            a.enemyScreamTimer[i] =
-                AudioTuning::ENEMY_SCREAM_MIN_INTERVAL +
-                r * (AudioTuning::ENEMY_SCREAM_MAX_INTERVAL - AudioTuning::ENEMY_SCREAM_MIN_INTERVAL);
+    // Garante sources por inimigo para cada tipo de som
+    for (size_t i = 0; i < n; ++i) {
+        // Scream (random)
+        if (a.bufEnemyScream && a.srcEnemyScreams[i] == 0) {
+            a.srcEnemyScreams[i] = a.engine.createSource(a.bufEnemyScream, false);
+            if (a.srcEnemyScreams[i]) {
+                alSourcei(a.srcEnemyScreams[i], AL_SOURCE_RELATIVE, AL_FALSE);
+                a.engine.setSourceGain(a.srcEnemyScreams[i], AudioTuning::MASTER * AudioTuning::ENEMY_SCREAM_GAIN);
+                a.engine.setSourceDistance(a.srcEnemyScreams[i], AudioTuning::ENEMY_REF_DIST, AudioTuning::ENEMY_ROLLOFF * 0.8f, AudioTuning::SCREAM_MAX_AUDIBLE_DIST);
+            }
+        }
+        // Spot (one-shot when seeing player)
+        if (a.bufMonsterSpot && a.srcEnemySpots[i] == 0) {
+            a.srcEnemySpots[i] = a.engine.createSource(a.bufMonsterSpot, false);
+            if (a.srcEnemySpots[i]) {
+                alSourcei(a.srcEnemySpots[i], AL_SOURCE_RELATIVE, AL_FALSE);
+                a.engine.setSourceGain(a.srcEnemySpots[i], AudioTuning::MASTER * AudioTuning::MONSTER_SPOT_GAIN);
+                a.engine.setSourceDistance(a.srcEnemySpots[i], AudioTuning::ENEMY_REF_DIST, AudioTuning::ENEMY_ROLLOFF, AudioTuning::ENEMY_MAX_DIST);
+            }
+        }
+        // Attack (one-shot)
+        if (a.bufMonsterAttack && a.srcEnemyAttacks[i] == 0) {
+            a.srcEnemyAttacks[i] = a.engine.createSource(a.bufMonsterAttack, false);
+            if (a.srcEnemyAttacks[i]) {
+                alSourcei(a.srcEnemyAttacks[i], AL_SOURCE_RELATIVE, AL_FALSE);
+                a.engine.setSourceGain(a.srcEnemyAttacks[i], AudioTuning::MASTER * AudioTuning::MONSTER_ATTACK_GAIN);
+                a.engine.setSourceDistance(a.srcEnemyAttacks[i], AudioTuning::ENEMY_REF_DIST, AudioTuning::ENEMY_ROLLOFF, AudioTuning::ENEMY_MAX_DIST);
+            }
         }
     }
 }
@@ -189,13 +151,15 @@ void audioInit(AudioSystem& a, const Level& level) {
     a.bufHurt = a.engine.loadWav("assets/audio/hurt_mono.wav");
     if (!a.bufHurt) a.bufHurt = a.engine.loadWav("assets/audio/hurt.wav");
 
-    a.bufLava = a.engine.loadWav("assets/audio/lava_mono.wav");
-    if (!a.bufLava) a.bufLava = a.engine.loadWav("assets/audio/lava.wav");
+
+    a.bufMonsterChase = a.engine.loadWav("assets/audio/sfx/sfx_monster_chase.wav.wav");
+    a.bufMonsterAttack = a.engine.loadWav("assets/audio/sfx/sfx_monster_attack.wav.wav");
+    a.bufMonsterIdle = a.engine.loadWav("assets/audio/sfx/sfx_monster_idle.wav.wav");
+    a.bufMonsterSpot = a.engine.loadWav("assets/audio/sfx/sfx_monster_spot.mp3");
 
     a.bufBreath = a.engine.loadWav("assets/audio/breath_mono.wav");
 
     a.bufGrunt = a.engine.loadWav("assets/audio/grunt_mono.wav");
-    if (!a.bufGrunt) a.bufGrunt = a.engine.loadWav("assets/audio/grunt.wav");
 
     // Ambient (2D loop)
     if (a.bufAmbient) {
@@ -259,17 +223,7 @@ void audioInit(AudioSystem& a, const Level& level) {
         a.engine.setSourceGain(a.srcHurt, AudioTuning::MASTER * AudioTuning::DAMAGE_GAIN);
     }
 
-    // Lava (3D loop start/stop no update)
-    if (a.bufLava) {
-        a.srcLava = a.engine.createSource(a.bufLava, true);
-        if (a.srcLava) {
-            alSourcei(a.srcLava, AL_SOURCE_RELATIVE, AL_FALSE);
-            a.engine.setSourceDistance(a.srcLava, 6.0f, 0.8f, 25.0f);
-            a.engine.setSourceGain(a.srcLava, AudioTuning::MASTER * AudioTuning::LAVA_GAIN);
-            a.engine.stop(a.srcLava);
-            a.lavaPlaying = false;
-        }
-    }
+
 
     // Breath (2D loop sempre tocando, ganho ajustado no update)
     if (a.bufBreath) {
@@ -324,44 +278,71 @@ void audioUpdate(
         }
     }
 
-    // Enemy loops
+    // 3. Enemy SFX State Machine + Loops
     ensureEnemySources(a, level);
-    for (size_t i = 0; i < level.enemies.size() && i < a.srcEnemies.size(); ++i) {
-        ALuint s = a.srcEnemies[i];
-        if (!s) continue;
+    ensureEnemyExtra(a, level);
 
+    for (size_t i = 0; i < level.enemies.size(); ++i) {
         const auto& en = level.enemies[i];
+        int prev = a.enemyPrevState[i];
+        ALuint sLoop = a.srcEnemies[i];
+
         if (en.state == STATE_DEAD) {
-            a.engine.stop(s);
+            if (prev != STATE_DEAD) audioPlayKillAt(a, en.x, en.z);
+            if (sLoop) a.engine.stop(sLoop);
+            a.enemyPrevState[i] = (int)en.state;
             continue;
         }
 
-        a.engine.setSourcePos(s, {en.x, 0.0f, en.z});
+        // --- Transition Events (One-shots) ---
 
-        float dx = en.x - listener.pos.x;
-        float dz = en.z - listener.pos.z;
-        float dist = std::sqrt(dx * dx + dz * dz);
-
-        ALint st = 0;
-        alGetSourcei(s, AL_SOURCE_STATE, &st);
-        const bool playing = (st == AL_PLAYING);
-
-        if (!playing && dist <= AudioTuning::ENEMY_START_DIST) {
-            a.engine.play(s);
-        } else if (playing && dist >= AudioTuning::ENEMY_STOP_DIST) {
-            a.engine.stop(s);
+        // Spot (seeing player)
+        if (prev == STATE_IDLE && en.state == STATE_CHASE) {
+            ALuint sSpot = a.srcEnemySpots[i];
+            if (sSpot) {
+                a.engine.setSourcePos(sSpot, {en.x, 0.0f, en.z});
+                a.engine.stop(sSpot);
+                a.engine.play(sSpot);
+            }
         }
-    }
-
-    // Kill detect + screams
-    ensureEnemyExtra(a, level);
-
-    // kill detect
-    for (size_t i = 0; i < level.enemies.size(); ++i) {
-        const auto& en = level.enemies[i];
-        if (a.enemyPrevState[i] != STATE_DEAD && en.state == STATE_DEAD) {
-            audioPlayKillAt(a, en.x, en.z);
+        // Attack
+        if (prev != STATE_ATTACK && en.state == STATE_ATTACK) {
+            ALuint sAtt = a.srcEnemyAttacks[i];
+            if (sAtt) {
+                a.engine.setSourcePos(sAtt, {en.x, 0.0f, en.z});
+                a.engine.stop(sAtt);
+                a.engine.play(sAtt);
+            }
         }
+
+        // --- Update Loop (Distance-based playback) ---
+        if (sLoop) {
+            a.engine.setSourcePos(sLoop, {en.x, 0.0f, en.z});
+
+            // Update buffer/gain based on current state
+            if (en.state == STATE_CHASE || en.state == STATE_ATTACK) {
+                alSourcei(sLoop, AL_BUFFER, a.bufMonsterChase);
+                a.engine.setSourceGain(sLoop, AudioTuning::MASTER * AudioTuning::MONSTER_CHASE_GAIN);
+            } else {
+                alSourcei(sLoop, AL_BUFFER, a.bufMonsterIdle);
+                a.engine.setSourceGain(sLoop, AudioTuning::MASTER * AudioTuning::MONSTER_IDLE_GAIN);
+            }
+
+            float dx = en.x - listener.pos.x;
+            float dz = en.z - listener.pos.z;
+            float dist = std::sqrt(dx * dx + dz * dz);
+
+            ALint st = 0;
+            alGetSourcei(sLoop, AL_SOURCE_STATE, &st);
+            const bool playing = (st == AL_PLAYING);
+
+            if (!playing && dist <= AudioTuning::ENEMY_START_DIST) {
+                a.engine.play(sLoop);
+            } else if (playing && dist >= AudioTuning::ENEMY_STOP_DIST) {
+                a.engine.stop(sLoop);
+            }
+        }
+
         a.enemyPrevState[i] = (int)en.state;
     }
 
@@ -403,30 +384,7 @@ void audioUpdate(
         }
     }
 
-    // Lava loop start/stop
-    if (a.srcLava) {
-        float lx, lz, dist;
-        bool hasLava = nearestLava(level, listener.pos.x, listener.pos.z, lx, lz, dist);
 
-        const float LAVA_START = 8.0f;
-        const float LAVA_STOP  = 9.5f;
-
-        if (hasLava) {
-            a.engine.setSourcePos(a.srcLava, {lx, 0.0f, lz});
-            if (!a.lavaPlaying && dist <= LAVA_START) {
-                a.engine.play(a.srcLava);
-                a.lavaPlaying = true;
-            } else if (a.lavaPlaying && dist >= LAVA_STOP) {
-                a.engine.stop(a.srcLava);
-                a.lavaPlaying = false;
-            }
-        } else {
-            if (a.lavaPlaying) {
-                a.engine.stop(a.srcLava);
-                a.lavaPlaying = false;
-            }
-        }
-    }
 
     // Breath gain (low HP)
     if (a.srcBreath) {
@@ -478,6 +436,10 @@ void audioPlayHurt(AudioSystem& a) {
 
 void audioPlayKillAt(AudioSystem& a, float x, float z) {
     play3DAt(a, a.srcKill, x, z);
+}
+
+void audioPlayBatteryPickup(AudioSystem& a) {
+    play2D(a, a.srcClickReload);
 }
 
 void audioOnPlayerShot(AudioSystem& a) {

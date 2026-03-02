@@ -1,0 +1,81 @@
+# Luzes Apagadas — Fix Wall Flickering, Enemy AI, and Ceiling Texture
+
+Three changes to fix rendering artifacts, correct enemy behavior around light posts, and add the ceiling texture.
+
+---
+
+## Proposed Changes
+
+### Fix 1: Wall Rendering Flickering
+
+#### Root Cause
+In [drawlevel.cpp](file:///d:/UNIFAP/projeto-doom-computacao-grafica/src/graphics/drawlevel.cpp), the [drawFace()](file:///d:/UNIFAP/projeto-doom-computacao-grafica/src/graphics/drawlevel.cpp#376-395) function (line 376-394) classifies wall-face neighbors to decide lighting mode. It treats only `'0'`, `'B'`, `'D'` as "outside", so entity chars like `'P'`, `'H'`, `'9'`, `'J'`, `'T'`, `'M'`, `'K'`, `'G'`, `'E'`, `'F'`, `'I'`, `'A'` fall into the `else if (neighbor != '2')` branch, which calls [beginIndoor()](file:///d:/UNIFAP/projeto-doom-computacao-grafica/src/graphics/drawlevel.cpp#127-139) on tiles that should be outdoor. This causes incorrect lighting state toggling every frame on those wall faces, producing visible flickering.
+
+#### [MODIFY] [drawlevel.cpp](file:///d:/UNIFAP/projeto-doom-computacao-grafica/src/graphics/drawlevel.cpp)
+
+Expand the `outside` check in [drawFace()](file:///d:/UNIFAP/projeto-doom-computacao-grafica/src/graphics/drawlevel.cpp#376-395) to include **all** non-wall, non-indoor-floor characters:
+
+```diff
+-    bool outside = (neighbor == '0' || neighbor == 'B' || neighbor == 'D');
++    bool outside = (neighbor != '1' && neighbor != '2' && neighbor != '3');
+```
+
+This way, **any** neighbor that isn't a wall (`'1'`, `'2'`) or indoor floor (`'3'`) is treated as outside. This covers all entity chars, spawn points, blood tiles, doors, and light posts correctly.
+
+---
+
+### Fix 2: Enemy AI — Safe Zone Avoidance
+
+#### Root Cause
+Currently in [entities.cpp](file:///d:/UNIFAP/projeto-doom-computacao-grafica/src/core/entities.cpp) (lines 55-66), enemies that are **already inside** a safe zone get forced to `STATE_IDLE`. This means they freeze in place but don't **avoid** the safe zone. The correct behavior is:
+
+- Enemies should **not enter** the safe zone of an active light post
+- Enemies should **chase the player** when the player is **outside** all safe zones
+- If the enemy tries to move toward the player but the next position is inside a safe zone, they should stop at the boundary (refuse to step in)
+
+#### [MODIFY] [entities.cpp](file:///d:/UNIFAP/projeto-doom-computacao-grafica/src/core/entities.cpp)
+
+Replace the current "freeze if in safe zone" logic with movement-blocking logic:
+
+1. **Remove** the early-return safe zone freeze (lines 55-66)
+2. **In the CHASE movement** (lines 88-100): before applying `en.x = nextX` or `en.z = nextZ`, check if the new position would be inside a safe zone — if so, don't move on that axis
+3. **Add**: enemies should still chase the player even if they can't reach them (they just stop at the safe zone boundary)
+4. **Keep**: when an enemy is already inside a safe zone at spawn or if a post turns on while they're inside, gently push them out (or just hold them idle until the post turns off)
+
+---
+
+### Fix 3: Ceiling Texture
+
+#### Root Cause
+In [drawlevel.cpp](file:///d:/UNIFAP/projeto-doom-computacao-grafica/src/graphics/drawlevel.cpp), [desenhaQuadTeto()](file:///d:/UNIFAP/projeto-doom-computacao-grafica/src/graphics/drawlevel.cpp#148-166) (line 148-165) explicitly unbinds textures (`glBindTexture(GL_TEXTURE_2D, 0)`) and renders solid black. The ceiling texture `r.texTeto` is already loaded from [assets/082.png](file:///d:/UNIFAP/projeto-doom-computacao-grafica/assets/082.png) but is never used.
+
+#### [MODIFY] [drawlevel.cpp](file:///d:/UNIFAP/projeto-doom-computacao-grafica/src/graphics/drawlevel.cpp)
+
+1. Add a `GLuint texTeto` parameter to [desenhaQuadTeto()](file:///d:/UNIFAP/projeto-doom-computacao-grafica/src/graphics/drawlevel.cpp#148-166)
+2. Bind `texTeto` instead of texture 0
+3. Add UV coordinates to the ceiling quad vertices
+4. Remove the `glColor3f(0,0,0)` override (use white so texture shows properly)
+5. Update all callers: [desenhaTileChao()](file:///d:/UNIFAP/projeto-doom-computacao-grafica/src/graphics/drawlevel.cpp#207-221) and [desenhaTileSangue()](file:///d:/UNIFAP/projeto-doom-computacao-grafica/src/graphics/drawlevel.cpp#339-361) to pass `r.texTeto`
+6. Thread `r.texTeto` through [desenhaTileChao()](file:///d:/UNIFAP/projeto-doom-computacao-grafica/src/graphics/drawlevel.cpp#207-221) as well (add parameter)
+
+---
+
+## Verification Plan
+
+### Build Verification
+Build the project from the `build` folder using `mingw32-make` (or `cmake --build .`). Confirm zero compilation errors.
+
+### Manual Gameplay Verification (By User)
+
+> [!IMPORTANT]
+> After the changes compile, please test these three things in-game:
+
+1. **Walls**: Walk around the map (especially near transitions between outdoor `0` tiles and indoor `2`/`3` tiles, and near light post `P` tiles). Walls should render solidly with **no flickering or blinking faces**.
+
+2. **Enemy AI**: Observe enemies near light post safe zones:
+   - When you're outside a safe zone, enemies should **chase** you toward you
+   - When an enemy reaches the boundary of an active light post's safe zone, it should **stop** at the edge and not step inside
+   - If a post turns off, enemies should resume chasing through that area
+   - Enemies should NOT freeze in place forever
+
+3. **Ceiling**: Look up (or notice the ceiling above you). It should now show a **texture pattern** (the [082.png](file:///d:/UNIFAP/projeto-doom-computacao-grafica/assets/082.png) tile texture) instead of being solid black.

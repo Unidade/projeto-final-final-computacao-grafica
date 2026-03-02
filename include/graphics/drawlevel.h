@@ -18,6 +18,9 @@ void drawEntities(const std::vector<Enemy> &enemies,
 void drawLightPosts(const std::vector<LightPost>& posts,
                     float camX, float camZ, float dx, float dz);
 
+
+
+
 void setPostLightEachFrame(float postX, float postZ, float intensity, bool enabled);
 
 #endif

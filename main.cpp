@@ -35,7 +35,7 @@ int main(int argc, char **argv)
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
     glutInitWindowSize(janelaW, janelaH);
-    glutCreateWindow("Agora é DOOM");
+    glutCreateWindow("Luzes Apagadas");
 
     GLenum err = glewInit();
     if (err != GLEW_OK)
@@ -46,7 +46,7 @@ int main(int argc, char **argv)
 
     appInit();
 
-    if (!gameInit("maps/map1.txt"))
+    if (!gameInit("maps/level1.txt"))
         return 1;
 
     glutMainLoop();

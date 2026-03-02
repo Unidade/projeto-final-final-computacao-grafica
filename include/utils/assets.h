@@ -8,7 +8,7 @@ struct GameAssets
     GLuint texChao = 0;
     GLuint texParede = 0;
     GLuint texSangue = 0;
-    GLuint texLava = 0;
+    GLuint texDoor = 0;
     GLuint texChaoInterno = 0;
     GLuint texParedeInterna = 0;
     GLuint texTeto = 0;
@@ -18,6 +18,7 @@ struct GameAssets
     GLuint texHealthOverlay = 0; // Tela de cura
     GLuint texHealth = 0;
     GLuint texAmmo = 0;
+    GLuint texBattery = 0;
     GLuint texLinternOn = 0;
     GLuint texLinternOff = 0;
     GLuint texGunDefault = 0;
@@ -35,7 +36,6 @@ struct GameAssets
 
     // shaders
     GLuint progSangue = 0;
-    GLuint progLava = 0;
 
     GLuint texSkydome = 0;
 };

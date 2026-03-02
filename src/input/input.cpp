@@ -37,6 +37,17 @@ void keyboard(unsigned char key, int, int)
         return;
     }
 
+    // --- VITORIA ---
+    if (state == GameState::VITORIA)
+    {
+        if (key == 13)
+        { // ENTER reinicia do Level 1
+            gameReset();
+            gameSetState(GameState::JOGANDO);
+        }
+        return;
+    }
+
     // --- PAUSE ---
     if (state == GameState::PAUSADO)
     {

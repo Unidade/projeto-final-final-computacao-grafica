@@ -29,8 +29,11 @@ namespace AudioTuning
     static constexpr int LOW_HP_THRESHOLD = 40; // vida abaixo disso ativa respiração
     static constexpr float BREATH_GAIN = 0.95f;
 
-    // ===== Lava (3D por proximidade) =====
-    static constexpr float LAVA_GAIN = 0.85f;
+    // ===== Monster SFX (3D) =====
+    static constexpr float MONSTER_CHASE_GAIN = 1.10f;
+    static constexpr float MONSTER_IDLE_GAIN  = 0.65f;
+    static constexpr float MONSTER_ATTACK_GAIN = 1.25f;
+    static constexpr float MONSTER_SPOT_GAIN   = 1.35f;
 
     // ===== Inimigos 3D (loop base) =====
     static constexpr float ENEMY_BASE_GAIN = 0.75f; // ganho base do loop do inimigo
