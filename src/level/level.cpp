@@ -18,7 +18,7 @@ bool loadLevel(Level &lvl, const char *mapPath, float tileSize)
 
     lvl.metrics = LevelMetrics::fromMap(lvl.map, tileSize);
     
-    // Limpa entidades antigas se houver
+    // Limpa entidades antigas e estado local do mapa se houver
     lvl.enemies.clear();
     lvl.items.clear();
     lvl.posts.clear();
@@ -95,6 +95,7 @@ bool loadLevel(Level &lvl, const char *mapPath, float tileSize)
             }
             else if (c == 'V') // Bateria (Luzes Apagadas)
             {
+                lvl.batteriesRequiredInMap++;
                 Item i;
                 i.x = wx;
                 i.z = wz;

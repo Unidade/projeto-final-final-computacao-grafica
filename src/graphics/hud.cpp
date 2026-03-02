@@ -220,7 +220,7 @@ static void drawStatusBar(int w, int h, const HudTextures& tex, const HudState& 
     // Luzes Apagadas: battery count
     float xBattery = w * 0.52f;
     glColor3fv(colLbl);
-    uiDrawStrokeText(xBattery, hBar * 0.20f, "BATERIAS", scaleLbl);
+    uiDrawStrokeText(xBattery, hBar * 0.20f, "BATERIAS (FASE)", scaleLbl);
     glColor3f(0.6f, 0.9f, 0.4f);
     glPushMatrix();
     glTranslatef(xBattery + 5.0f, hBar * 0.50f, 0);
