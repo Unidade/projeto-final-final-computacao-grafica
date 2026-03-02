@@ -521,3 +521,65 @@ void pauseMenuRender(int screenW, int screenH, float tempo, const RenderAssets &
     end2D();
     glPopAttrib();
 }
+
+void levelTransitionRender(int screenW, int screenH, float tempo, float progress, int nextLevel, const RenderAssets &a)
+{
+    glPushAttrib(GL_ALL_ATTRIB_BITS);
+
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_LIGHTING);
+    glDisable(GL_FOG);
+    glDisable(GL_CULL_FACE);
+
+    // 1) Desenha o overlay fullscreen via shader (com alpha crescente 0->1)
+    if (a.progTransition != 0)
+    {
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+        glUseProgram(a.progTransition);
+
+        glUniform1f(glGetUniformLocation(a.progTransition, "uTime"), tempo);
+        glUniform1f(glGetUniformLocation(a.progTransition, "uProgress"), progress);
+        glUniform2f(glGetUniformLocation(a.progTransition, "uResolution"), (float)screenW, (float)screenH);
+
+        begin2D(screenW, screenH);
+        
+        glColor4f(1, 1, 1, 1);
+        glBegin(GL_QUADS);
+        glTexCoord2f(0, 1); glVertex2f(0, 0);
+        glTexCoord2f(1, 1); glVertex2f((float)screenW, 0);
+        glTexCoord2f(1, 0); glVertex2f((float)screenW, (float)screenH);
+        glTexCoord2f(0, 0); glVertex2f(0, (float)screenH);
+        glEnd();
+
+        glUseProgram(0);
+        end2D();
+    }
+
+    // 2) Se o progresso for alto, mostra o texto "PROXIMA FASE X"
+    if (progress > 0.85f)
+    {
+        begin2D(screenW, screenH);
+        
+        char text[64];
+        std::snprintf(text, sizeof(text), "FASE %d COMPLETA!", nextLevel - 1);
+        
+        float scale = 0.5f;
+        float w = uiStrokeTextWidthScaled(text, scale);
+        float x = (screenW - w) / 2.0f;
+        float y = screenH / 2.0f;
+
+        glLineWidth(4.0f);
+        
+        // brilho com base no tempo
+        float pulse = 0.5f + 0.5f * std::sin(tempo * 6.0f);
+        glColor3f(0.5f + 0.5f*pulse, 1.0f, 0.5f + 0.5f*pulse);
+        
+        uiDrawStrokeText(x, y, text, scale);
+        
+        end2D();
+    }
+
+    glPopAttrib();
+}

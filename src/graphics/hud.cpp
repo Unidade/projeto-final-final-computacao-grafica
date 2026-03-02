@@ -147,144 +147,170 @@ static void drawFlashlightHUD(int w, int h, const HudTextures& tex, bool flashli
 static void drawStatusBar(int w, int h, const HudTextures& tex, const HudState& s)
 {
     glPushAttrib(GL_ALL_ATTRIB_BITS);
-
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_LIGHTING);
     glDisable(GL_CULL_FACE);
 
     begin2D(w, h);
 
-    float hBar = h * 0.10f;
+    float hBar = h * 0.10f; // Altura da barra
 
-    // Fundo sólido (sem textura Doom)
+    // --- 1. FUNDO DA BARRA ---
     glDisable(GL_TEXTURE_2D);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glColor4f(0.12f, 0.10f, 0.10f, 0.92f);
     glBegin(GL_QUADS);
-    glVertex2f(0, 0);
-    glVertex2f((float)w, 0);
-    glVertex2f((float)w, hBar);
-    glVertex2f(0, hBar);
+        glVertex2f(0, 0); glVertex2f((float)w, 0);
+        glVertex2f((float)w, hBar); glVertex2f(0, hBar);
     glEnd();
     glDisable(GL_BLEND);
 
-    // bordas
-    glLineWidth(3.0f);
+    // --- 2. BORDAS ---
+    glLineWidth(2.0f);
     glColor3f(0.7f, 0.7f, 0.75f);
     glBegin(GL_LINES); glVertex2f(0, hBar); glVertex2f((float)w, hBar); glEnd();
 
     glColor3f(0.2f, 0.2f, 0.25f);
     glBegin(GL_LINES); glVertex2f(w / 2.0f, 0); glVertex2f(w / 2.0f, hBar); glEnd();
 
-    // texto
-    float scaleLbl = 0.0018f * hBar;
-    float scaleNum = 0.0035f * hBar;
+    // --- CONFIGURAÇÃO DE TAMANHOS (ESCALAS) ---
+    // AQUI ESTÃO OS AJUSTES QUE VOCÊ PEDIU:
+    float scaleVida = 0.0020f * hBar;    // AUMENTEI (Texto VIDA grande)
+    float scalePequeno = 0.0015f * hBar; // DIMINUI (Texto Baterias bem pequeno)
+    float scaleNum = 0.0022f * hBar;     // Números (Médio)
+    
+    float colLbl[3] = {1.0f, 0.8f, 0.5f}; // Cor bege/dourada
 
-    float colLbl[3] = {1.0f, 0.8f, 0.5f};
-    float colNum[3] = {0.8f, 0.0f, 0.0f};
-
-    // HEALTH label
-    float xTextHealth = w * 0.08f;
-    float yLblHealth = hBar * 0.35f;
+    // ==========================================
+    // 3. VIDA (MAIOR)
+    // ==========================================
+    float xTextHealth = w * 0.05f;
+    float yLblHealth = hBar * 0.35f; // Ajustei levemente a altura
+    
     glColor3fv(colLbl);
-    uiDrawStrokeText(xTextHealth, yLblHealth, "HEALTH", scaleLbl);
+    uiDrawStrokeText(xTextHealth, yLblHealth, "VIDA", scaleVida); // Usa escala maior
 
-    // barra vida
-    float barH = hBar * 0.5f;
+    // Barra de Vida
+    float barH = hBar * 0.35f;
     float barY = (hBar - barH) / 2.0f;
-    float barX = xTextHealth + (w * 0.08f);
-    float barMaxW = (w * 0.45f) - barX;
+    // Empurrei a barra um pouco mais pra direita para não bater no texto "VIDA" maior
+    float barX = xTextHealth + (w * 0.10f); 
+    float barMaxW = (w * 0.35f) - barX;
 
+    // Fundo da barra
     glColor4f(0, 0, 0, 1);
     glBegin(GL_QUADS);
-    glVertex2f(barX, barY); glVertex2f(barX + barMaxW, barY);
-    glVertex2f(barX + barMaxW, barY + barH); glVertex2f(barX, barY + barH);
+        glVertex2f(barX, barY); glVertex2f(barX + barMaxW, barY);
+        glVertex2f(barX + barMaxW, barY + barH); glVertex2f(barX, barY + barH);
     glEnd();
 
+    // Vida Colorida
     float pct = (float)s.playerHealth / 100.0f;
-    if (pct < 0) pct = 0;
-    if (pct > 1) pct = 1;
-
-    if (pct > 0.6f) glColor3f(0.0f, 0.8f, 0.0f);
-    else if (pct > 0.3f) glColor3f(1.0f, 0.8f, 0.0f);
-    else glColor3f(0.8f, 0.0f, 0.0f);
+    if (pct < 0) pct = 0; if (pct > 1) pct = 1;
+    
+    if (pct > 0.6f) glColor3f(0.0f, 0.8f, 0.0f);      
+    else if (pct > 0.3f) glColor3f(1.0f, 0.8f, 0.0f); 
+    else glColor3f(0.8f, 0.0f, 0.0f);                 
 
     glBegin(GL_QUADS);
-    glVertex2f(barX, barY);
-    glVertex2f(barX + (barMaxW * pct), barY);
-    glVertex2f(barX + (barMaxW * pct), barY + barH);
-    glVertex2f(barX, barY + barH);
+        glVertex2f(barX, barY);
+        glVertex2f(barX + (barMaxW * pct), barY);
+        glVertex2f(barX + (barMaxW * pct), barY + barH);
+        glVertex2f(barX, barY + barH);
     glEnd();
 
-    // Luzes Apagadas: battery count
-    float xBattery = w * 0.52f;
-    glColor3fv(colLbl);
-    uiDrawStrokeText(xBattery, hBar * 0.20f, "BATERIAS (FASE)", scaleLbl);
+    // ==========================================
+    // 4. BATERIAS (MENOR)
+    // ==========================================
+    float xBatArea = w * 0.60f; 
+    
+    float batW = hBar * 0.40f;  
+    float batH = hBar * 0.22f;  
+    float batY = hBar * 0.45f;  
+    float nubW = batW * 0.1f;   
+    
+    // Desenha corpo da bateria
+    glLineWidth(2.0f);
+    glColor3f(1.0f, 1.0f, 1.0f); 
+    glBegin(GL_LINE_LOOP);
+        glVertex2f(xBatArea, batY);
+        glVertex2f(xBatArea + batW, batY);
+        glVertex2f(xBatArea + batW, batY + batH);
+        glVertex2f(xBatArea, batY + batH);
+    glEnd();
 
-    GLuint texBat = tex.texBattery0;
-    if (s.batteriesRequired > 0)
-    {
-        float pctBat = (float)s.batteriesCollected / (float)s.batteriesRequired;
-        if (pctBat >= 1.0f) texBat = tex.texBattery100;
-        else if (pctBat >= 0.75f) texBat = tex.texBattery75;
-        else if (pctBat >= 0.50f) texBat = tex.texBattery50;
-        else if (pctBat >= 0.25f) texBat = tex.texBattery25;
-    }
+    // Desenha polo positivo
+    glBegin(GL_QUADS);
+        glVertex2f(xBatArea + batW, batY + batH * 0.25f);
+        glVertex2f(xBatArea + batW + nubW, batY + batH * 0.25f);
+        glVertex2f(xBatArea + batW + nubW, batY + batH * 0.75f);
+        glVertex2f(xBatArea + batW, batY + batH * 0.75f);
+    glEnd();
 
-    if (texBat)
-    {
-        glEnable(GL_TEXTURE_2D);
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        glBindTexture(GL_TEXTURE_2D, texBat);
-        glColor3f(1, 1, 1);
-        float bw = hBar * 1.4f;
-        float bh = hBar * 0.7f;
+    // Preenchimento
+    float fillPct = (float)s.batteriesCollected / (float)s.batteriesRequired;
+    if(fillPct > 1.0f) fillPct = 1.0f;
+    if(fillPct > 0.0f) {
+        glColor3f(0.0f, 0.9f, 0.0f);
+        float pad = 2.0f; 
         glBegin(GL_QUADS);
-        glTexCoord2f(0, 1); glVertex2f(xBattery, hBar * 0.25f);
-        glTexCoord2f(1, 1); glVertex2f(xBattery + bw, hBar * 0.25f);
-        glTexCoord2f(1, 0); glVertex2f(xBattery + bw, hBar * 0.25f + bh);
-        glTexCoord2f(0, 0); glVertex2f(xBattery, hBar * 0.25f + bh);
+            glVertex2f(xBatArea + pad, batY + pad);
+            glVertex2f(xBatArea + pad + ((batW - 2*pad) * fillPct), batY + pad);
+            glVertex2f(xBatArea + pad + ((batW - 2*pad) * fillPct), batY + batH - pad);
+            glVertex2f(xBatArea + pad, batY + batH - pad);
         glEnd();
-        glDisable(GL_BLEND);
-        glDisable(GL_TEXTURE_2D);
     }
-
-    // Verde brilhante se completo, verde normal se em progresso
-    bool allDone = (s.batteriesRequired > 0 && s.batteriesCollected >= s.batteriesRequired);
-    if (allDone)
-        glColor3f(0.2f, 1.0f, 0.3f); // verde vivo
-    else
-        glColor3f(0.6f, 0.9f, 0.4f); // verde suave normal
+    // NÚMERO
+    glColor3f(0.6f, 0.9f, 0.4f); 
     glPushMatrix();
-    glTranslatef(xBattery + hBar * 1.5f + 5.0f, hBar * 0.50f, 0);
-    glScalef(scaleNum, scaleNum, 1);
-    {
+        float numX = xBatArea + batW + nubW + (w * 0.015f); 
+        float numY = batY + (batH * 0.2f); 
+        glTranslatef(numX, numY, 0);
+        glScalef(scaleNum, scaleNum, 1);
+        
         std::string sBat = std::to_string(s.batteriesCollected) + "/" + std::to_string(s.batteriesRequired);
         for (char c : sBat) glutStrokeCharacter(GLUT_STROKE_MONO_ROMAN, c);
-    }
-    glPopMatrix();
+glPopMatrix();
 
-    // Key icon (collected/not)
-    float xKey = w * 0.68f;
+    // LEGENDA (Aqui usamos a scalePequeno)
     glColor3fv(colLbl);
-    uiDrawStrokeText(xKey, hBar * 0.20f, "CHAVE", scaleLbl);
+    // Usei "BATERIAS" em vez de "BATERIAS (FASE)" pra ajudar a caber, mas se quiser manter o texto longo, ele vai ficar pequeno o suficiente agora.
+    const char* textoBat = "BATERIAS"; 
+    float lblBatW = uiStrokeTextWidthScaled(textoBat, scalePequeno);
+    float centerGroup = xBatArea + (batW + nubW + 40.0f) / 2.0f; 
+    
+    // Desenha usando scalePequeno
+    uiDrawStrokeText(centerGroup - (lblBatW/2.0f), hBar * 0.15f, textoBat, scalePequeno);
+
+    // ==========================================
+    // 5. CHAVE
+    // ==========================================
+    float xKeyCenter = w * 0.85f;
+
+    // Legenda CHAVE (Usa scalePequeno também para combinar)
+    glColor3fv(colLbl);
+    float lblKeyW = uiStrokeTextWidthScaled("CHAVE", scalePequeno);
+    uiDrawStrokeText(xKeyCenter - (lblKeyW/2.0f), hBar * 0.15f, "CHAVE", scalePequeno);
+
+    // Ícone da Chave
     int kl = (s.currentLevel >= 1 && s.currentLevel <= 3) ? (s.currentLevel - 1) : 0;
     GLuint keyTex = tex.texKeyHud[kl];
+    float keySize = hBar * 0.45f;
+    float keyYPos = hBar * 0.40f;
+
     if (keyTex && s.hasLevelKey)
     {
         glEnable(GL_TEXTURE_2D);
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         glBindTexture(GL_TEXTURE_2D, keyTex);
-        glColor3f(1, 1, 1);
-        float kw = hBar * 1.2f;
+     glColor3f(1, 1, 1);
         glBegin(GL_QUADS);
-        glTexCoord2f(0, 1); glVertex2f(xKey, hBar * 0.25f);
-        glTexCoord2f(1, 1); glVertex2f(xKey + kw, hBar * 0.25f);
-        glTexCoord2f(1, 0); glVertex2f(xKey + kw, hBar * 0.25f + kw);
-        glTexCoord2f(0, 0); glVertex2f(xKey, hBar * 0.25f + kw);
+            glTexCoord2f(0, 1); glVertex2f(xKeyCenter - keySize/2, keyYPos);
+            glTexCoord2f(1, 1); glVertex2f(xKeyCenter + keySize/2, keyYPos);
+            glTexCoord2f(1, 0); glVertex2f(xKeyCenter + keySize/2, keyYPos + keySize);
+            glTexCoord2f(0, 0); glVertex2f(xKeyCenter - keySize/2, keyYPos + keySize);
         glEnd();
         glDisable(GL_BLEND);
         glDisable(GL_TEXTURE_2D);
@@ -292,12 +318,17 @@ static void drawStatusBar(int w, int h, const HudTextures& tex, const HudState& 
     else
     {
         glColor3f(0.4f, 0.4f, 0.4f);
-        uiDrawStrokeText(xKey + 2.0f, hBar * 0.50f, "?", scaleNum);
+        glPushMatrix();
+            glTranslatef(xKeyCenter - (100.0f * scaleNum)/2.0f, keyYPos, 0);
+            glScalef(scaleNum, scaleNum, 1);
+            glutStrokeCharacter(GLUT_STROKE_MONO_ROMAN, '?');
+        glPopMatrix();
     }
 
     end2D();
     glPopAttrib();
 }
+
 
 // Exibe mensagem centralizada na tela quando a porta está bloqueada
 static void drawDoorMessage(int w, int h, const char* msg, float alpha)

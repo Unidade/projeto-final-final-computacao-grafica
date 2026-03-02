@@ -35,6 +35,7 @@ struct GameAssets
     // shaders
     GLuint progSangue = 0;
     GLuint progBatteryFlash = 0; // glow verde ao coletar todas as baterias
+    GLuint progTransition = 0;   // shader de fade-out de nivel
 };
 
 bool loadAssets(GameAssets &a);

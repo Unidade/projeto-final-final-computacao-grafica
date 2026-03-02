@@ -48,6 +48,7 @@ struct RenderAssets
 
     GLuint progSangue = 0;
     GLuint progBatteryFlash = 0; // glow verde
+    GLuint progTransition = 0;   // shader de fade-out
 };
 
 struct GameContext
@@ -72,6 +73,10 @@ struct GameContext
 
     // Flash verde ao coletar todas as baterias
     float allBatteriesFlashTimer = 0.0f;
+
+    // Transição de Nível
+    float transitionTimer = 0.0f;
+    int nextLevelToLoad = 0;
 
     RenderAssets r;
 };

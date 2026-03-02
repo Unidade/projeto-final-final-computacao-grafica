@@ -155,6 +155,7 @@ bool gameInit(const char *mapPath)
         g.r.texKey[i] = gAssets.texKey[i];
 
     g.r.progSangue = gAssets.progSangue;
+    g.r.progTransition = gAssets.progTransition;
 
     // Carrega o modelo 3D do inimigo avatar (GLB)
     if (!AvatarSystem::loadModel("assets/enemies/inimigo_fase.glb"))
@@ -226,6 +227,44 @@ void gameReset()
 void gameUpdate(float dt)
 {
     g.time += dt;
+
+    // Lógica de transição de fase
+    if (g.state == GameState::LEVEL_TRANSITION)
+    {
+        g.transitionTimer += dt;
+        if (g.transitionTimer >= 2.0f) // 2 segundos total ate carregar novo mapa
+        {
+            gLevel.currentLevel = g.nextLevelToLoad;
+            char mapPath[64];
+            std::snprintf(mapPath, sizeof(mapPath), "maps/level%d.txt", gLevel.currentLevel);
+            int savedLevel = gLevel.currentLevel;
+            
+            if (loadLevel(gLevel, mapPath, GameConfig::TILE_SIZE))
+            {
+                gLevel.currentLevel = savedLevel;
+                applySpawn(gLevel, camX, camZ);
+                camY = GameConfig::PLAYER_EYE_Y;
+                validateLevel(gLevel, savedLevel);
+                
+                g.lightSystem.stateA = LightCycleState::ON;
+                g.lightSystem.stateB = LightCycleState::OFF;
+                g.lightSystem.timer = 0.0f;
+                g.lightSystem.cycleCount = 0;
+                g.levelTime = 0.0f;
+                gLevel.batteriesCollectedInMap = 0;
+                g.doorMessageTimer = 0.0f;
+                g.doorMessageText  = nullptr;
+                audioInit(gAudioSys, gLevel);
+                
+                g.state = GameState::JOGANDO;
+            }
+            else
+            {
+                g.state = GameState::MENU_INICIAL;
+            }
+        }
+        return;
+    }
 
     // 1. SE NÃO ESTIVER JOGANDO, NÃO RODA A LÓGICA DO JOGO
     if (g.state != GameState::JOGANDO)
@@ -360,27 +399,9 @@ void gameUpdate(float dt)
             }
             else
             {
-                gLevel.currentLevel++;
-                char mapPath[64];
-                std::snprintf(mapPath, sizeof(mapPath), "maps/level%d.txt", gLevel.currentLevel);
-                int savedLevel = gLevel.currentLevel;
-                if (loadLevel(gLevel, mapPath, GameConfig::TILE_SIZE))
-                {
-                    gLevel.currentLevel = savedLevel;
-                    applySpawn(gLevel, camX, camZ);
-                    camY = GameConfig::PLAYER_EYE_Y;
-                    // Valida o novo nivel carregado
-                    validateLevel(gLevel, savedLevel);
-                    g.lightSystem.stateA = LightCycleState::ON;
-                    g.lightSystem.stateB = LightCycleState::OFF;
-                    g.lightSystem.timer = 0.0f;
-                    g.lightSystem.cycleCount = 0;
-                    g.levelTime = 0.0f;
-                    gLevel.batteriesCollectedInMap = 0;
-                    g.doorMessageTimer = 0.0f;
-                    g.doorMessageText  = nullptr;
-                    audioInit(gAudioSys, gLevel);
-                }
+                g.state = GameState::LEVEL_TRANSITION;
+                g.transitionTimer = 0.0f;
+                g.nextLevelToLoad = gLevel.currentLevel + 1;
             }
         }
     }
@@ -510,6 +531,14 @@ void gameRender()
         drawWorld3D();
         hudRenderAll(janelaW, janelaH, gHudTex, hs, true, true, true);
         pauseMenuRender(janelaW, janelaH, g.time, g.r);
+    }
+    // --- ESTADO: LEVEL TRANSITION ---
+    else if (g.state == GameState::LEVEL_TRANSITION)
+    {
+        drawWorld3D();
+        hudRenderAll(janelaW, janelaH, gHudTex, hs, false, false, false);
+        float progress = std::fmin(g.transitionTimer / 2.0f, 1.0f);
+        levelTransitionRender(janelaW, janelaH, g.time, progress, g.nextLevelToLoad, g.r);
     }
     // --- ESTADO: JOGANDO ---
     else

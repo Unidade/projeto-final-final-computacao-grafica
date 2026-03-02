@@ -126,25 +126,21 @@ void audioInit(AudioSystem& a, const Level& level) {
 
     a.engine.setDistanceModel();
 
-    // Ambient: use added WAV files
-    a.bufAmbient = a.engine.loadWav("assets/audio/music/music_ambient_loop.wav");
-    if (!a.bufAmbient) a.bufAmbient = a.engine.loadWav("assets/audio/music/music_ambient.wav.wav");
-    if (!a.bufAmbient) a.bufAmbient = a.engine.loadWav("assets/audio/music.wav");
+    a.bufAmbient = a.engine.loadWav("assets/audio/ambient_mono.wav");
 
-    a.bufChase = a.engine.loadWav("assets/audio/music/music_chase.wav.wav");
+    a.bufChase = a.engine.loadWav("assets/audio/music/music_chase.wav");
 
-    a.bufStep = a.engine.loadWav("assets/audio/sfx/sfx_step_concrete_01.wav.wav");
+    a.bufStep = a.engine.loadWav("assets/audio/sfx/sfx_step_concrete_01.wav");
     if (!a.bufStep) a.bufStep = a.engine.loadWav("assets/audio/step_mono.wav");
     if (!a.bufStep) a.bufStep = a.engine.loadWav("assets/audio/step.wav");
 
     a.bufEnemy = a.engine.loadWav("assets/audio/enemy_mono.wav");
     if (!a.bufEnemy) a.bufEnemy = a.engine.loadWav("assets/audio/enemy.wav");
 
-    a.bufClickReload = a.engine.loadWav("assets/audio/sfx/sfx_door_locked.wav.wav");
+    a.bufClickReload = a.engine.loadWav("assets/audio/sfx/sfx_door_locked.wav");
     if (!a.bufClickReload) a.bufClickReload = a.engine.loadWav("assets/audio/click_reload_mono.wav");
 
-    a.bufKill = a.engine.loadWav("assets/audio/sfx/sfx_monster_death.wav");
-    if (!a.bufKill) a.bufKill = a.engine.loadWav("assets/audio/kill_mono.wav");
+    a.bufKill = a.engine.loadWav("assets/audio/kill_mono.wav");
 
     a.bufEnemyScream = a.engine.loadWav("assets/audio/enemy_scream_mono.wav");
 
@@ -152,9 +148,9 @@ void audioInit(AudioSystem& a, const Level& level) {
     if (!a.bufHurt) a.bufHurt = a.engine.loadWav("assets/audio/hurt.wav");
 
 
-    a.bufMonsterChase = a.engine.loadWav("assets/audio/sfx/sfx_monster_chase.wav.wav");
-    a.bufMonsterAttack = a.engine.loadWav("assets/audio/sfx/sfx_monster_attack.wav.wav");
-    a.bufMonsterIdle = a.engine.loadWav("assets/audio/sfx/sfx_monster_idle.wav.wav");
+    a.bufMonsterChase = a.engine.loadWav("assets/audio/sfx/sfx_monster_chase.wav");
+    a.bufMonsterAttack = a.engine.loadWav("assets/audio/sfx/sfx_monster_attack.wav");
+    a.bufMonsterIdle = a.engine.loadWav("assets/audio/sfx/sfx_monster_idle.wav");
     a.bufMonsterSpot = a.engine.loadWav("assets/audio/sfx/sfx_monster_spot.wav");
 
     a.bufBreath = a.engine.loadWav("assets/audio/breath_mono.wav");

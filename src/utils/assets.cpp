@@ -20,6 +20,7 @@ bool loadAssets(GameAssets &a)
 
     a.progSangue = criaShader("shaders/blood.vert", "shaders/blood.frag");
     a.progBatteryFlash = criaShader("shaders/battery_flash.vert", "shaders/battery_flash.frag");
+    a.progTransition = criaShader("shaders/level_transition.vert", "shaders/level_transition.frag");
 
     // --- INIMIGO 0 ('J') ---
     a.texEnemies[0] = carregaTextura("assets/enemies/enemy.png");
