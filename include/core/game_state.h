@@ -61,5 +61,9 @@ struct GameContext
 
     LightSystem lightSystem; // ciclo ON→FLICKER→OFF
 
+    // Mensagem de porta bloqueada (mostrada no HUD)
+    float doorMessageTimer = 0.0f;
+    const char* doorMessageText = nullptr;
+
     RenderAssets r;
 };

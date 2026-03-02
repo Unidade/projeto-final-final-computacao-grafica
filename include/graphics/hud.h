@@ -25,6 +25,10 @@ struct HudState
     float healthAlpha = 0.0f;
 
     bool flashlightOn = true;
+
+    // Mensagem de porta bloqueada (nulo = sem mensagem)
+    const char* doorMessage = nullptr;
+    float doorMessageAlpha = 0.0f;
 };
 
 void hudRenderAll(

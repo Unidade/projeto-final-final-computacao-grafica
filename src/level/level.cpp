@@ -23,8 +23,11 @@ bool loadLevel(Level &lvl, const char *mapPath, float tileSize)
     lvl.items.clear();
     lvl.posts.clear();
     lvl.hasDoor = false;
+    lvl.doorOpen = false; // porta começa fechada
     lvl.batteriesCollectedInMap = 0;
     lvl.batteriesRequiredInMap = 0;
+    lvl.spawnX = 0.0f;
+    lvl.spawnZ = 0.0f;
 
     // 2. Escaneia o mapa procurando Entidades (E, H, etc)
     // Precisamos acessar os dados brutos do MapLoader como referência mudável
@@ -95,7 +98,6 @@ bool loadLevel(Level &lvl, const char *mapPath, float tileSize)
             }
             else if (c == 'V') // Bateria (Luzes Apagadas)
             {
-                lvl.batteriesRequiredInMap++;
                 Item i;
                 i.x = wx;
                 i.z = wz;
@@ -103,7 +105,7 @@ bool loadLevel(Level &lvl, const char *mapPath, float tileSize)
                 i.active = true;
                 i.respawnTimer = 0.0f;
                 lvl.items.push_back(i);
-                lvl.batteriesRequiredInMap++;
+                lvl.batteriesRequiredInMap++; // conta UMA vez por tile V
             }
             else if (c == 'Y') // Chave do nivel (Luzes Apagadas)
             {
@@ -146,6 +148,11 @@ bool loadLevel(Level &lvl, const char *mapPath, float tileSize)
                 lvl.hasDoor = true;
                 lvl.doorX = wx;
                 lvl.doorZ = wz;
+            }
+            else if (c == '9') // Spawn do jogador — salva para SafePost zone
+            {
+                lvl.spawnX = wx;
+                lvl.spawnZ = wz;
             }
         }
     }

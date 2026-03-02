@@ -264,6 +264,59 @@ static void drawStatusBar(int w, int h, const HudTextures& tex, const HudState& 
     glPopAttrib();
 }
 
+// Exibe mensagem centralizada na tela quando a porta está bloqueada
+static void drawDoorMessage(int w, int h, const char* msg, float alpha)
+{
+    if (!msg || alpha <= 0.0f)
+        return;
+
+    glPushAttrib(GL_ALL_ATTRIB_BITS);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_LIGHTING);
+    glDisable(GL_TEXTURE_2D);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    begin2D(w, h);
+
+    float scale = 0.00045f * h;
+    float textW = uiStrokeTextWidthScaled(msg, scale);
+    float pad   = h * 0.018f;
+    float lineH = h * 0.040f;
+    float bW    = textW + pad * 4.0f;
+    float bH    = lineH + pad * 2.5f;
+    float bx    = (w - bW) / 2.0f;
+    float by    = h * 0.48f;
+
+    // Fundo escuro semitransparente
+    glColor4f(0.05f, 0.0f, 0.0f, 0.75f * alpha);
+    glBegin(GL_QUADS);
+    glVertex2f(bx,      by);
+    glVertex2f(bx + bW, by);
+    glVertex2f(bx + bW, by + bH);
+    glVertex2f(bx,      by + bH);
+    glEnd();
+
+    // Borda vermelha
+    glLineWidth(2.0f);
+    glColor4f(0.9f, 0.1f, 0.1f, alpha);
+    glBegin(GL_LINE_LOOP);
+    glVertex2f(bx,      by);
+    glVertex2f(bx + bW, by);
+    glVertex2f(bx + bW, by + bH);
+    glVertex2f(bx,      by + bH);
+    glEnd();
+
+    // Texto branco
+    glColor4f(1.0f, 0.9f, 0.8f, alpha);
+    float tx = bx + (bW - textW) / 2.0f;
+    float ty = by + pad + lineH * 0.15f;
+    uiDrawStrokeText(tx, ty, msg, scale);
+
+    end2D();
+    glPopAttrib();
+}
+
 void desenhaTutorial(float time, int w, int h)
 {
     // Nada apos os dois paineis terem sumido
@@ -352,12 +405,13 @@ void hudRenderAll(
     bool showWeapon,
     bool showStatusBar)
 {
-    // Ordem: flashlight -> barra -> mira -> overlays (gun removed)
+    // Ordem: flashlight -> barra -> mira -> overlays
     if (showWeapon)  drawFlashlightHUD(screenW, screenH, tex, state.flashlightOn);
     if (showStatusBar) drawStatusBar(screenW, screenH, tex, state);
 
     if (showCrosshair) drawCrosshair(screenW, screenH);
 
+    drawDoorMessage(screenW, screenH, state.doorMessage, state.doorMessageAlpha);
     drawDamageOverlay(screenW, screenH, tex.texDamage, state.damageAlpha);
     drawHealthOverlay(screenW, screenH, tex.texHealthOverlay, state.healthAlpha);
 }

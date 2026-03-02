@@ -22,9 +22,13 @@ static bool isWallTile(int tx, int tz)
         return false;
 
     char c = data[tz][tx];
-    // Adicione E, H, A como liberados
+    // E, H, A são liberados (entidades/itens tratados como chão)
     if (c == 'E' || c == 'H' || c == 'A')
         return false;
+
+    // Porta bloqueada enquanto fechada, passável quando aberta
+    if (c == 'D')
+        return !gameLevel().doorOpen;
 
     return (c == '1' || c == '2');
 }

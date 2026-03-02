@@ -271,59 +271,91 @@ void gameUpdate(float dt)
             g.player.batteryCharge = 100.0f;
     }
 
-    // --- DOOR EXIT CHECK (Luzes Apagadas: need all batteries to use elevator) ---
-    static float doorLockedSoundCooldown = 0.0f;
-    if (doorLockedSoundCooldown > 0.0f)
-        doorLockedSoundCooldown -= dt;
+    // --- DOOR EXIT CHECK ---
+    // O jogador precisa apertar E perto da porta. Se os requisitos forem atendidos,
+    // a porta abre e o nivel transiciona; caso contrario, exibe mensagem de feedback.
 
-    if (gLevel.hasDoor)
+    if (g.doorMessageTimer > 0.0f)
+        g.doorMessageTimer -= dt;
+    else
+        g.doorMessageText = nullptr;
+
+    if (gLevel.hasDoor && !gLevel.doorOpen)
     {
         float ddx = camX - gLevel.doorX;
         float ddz = camZ - gLevel.doorZ;
-        if (ddx * ddx + ddz * ddz < 4.0f) // within 2 units of door
+        bool nearDoor = (ddx * ddx + ddz * ddz < 9.0f); // 3 unidades
+
+        if (nearDoor && keyE)
         {
+            keyE = false; // consume o pressionamento para nao repetir
+
             bool hasBatteries = (gLevel.batteriesCollectedInMap >= gLevel.batteriesRequiredInMap);
             int cl = gLevel.currentLevel;
             bool hasKey = (cl >= 1 && cl <= 3 && g.player.hasLevelKey[cl]);
 
-            if (!hasBatteries || !hasKey)
+            if (!hasBatteries && !hasKey)
             {
-                if (doorLockedSoundCooldown <= 0.0f)
-                {
-                    audioPlayPumpClick(gAudioSys);
-                    doorLockedSoundCooldown = 2.0f;
-                }
+                g.doorMessageText = "Colete as baterias e a chave!";
+                g.doorMessageTimer = 3.0f;
+                audioPlayPumpClick(gAudioSys);
             }
-            else if (hasBatteries && hasKey)
+            else if (!hasBatteries)
             {
-                if (gLevel.currentLevel >= 3)
+                g.doorMessageText = "Colete todas as baterias!";
+                g.doorMessageTimer = 3.0f;
+                audioPlayPumpClick(gAudioSys);
+            }
+            else if (!hasKey)
+            {
+                g.doorMessageText = "Voce precisa da chave!";
+                g.doorMessageTimer = 3.0f;
+                audioPlayPumpClick(gAudioSys);
+            }
+            else
+            {
+                // Requisitos atendidos: abre a porta
+                gLevel.doorOpen = true;
+            }
+        }
+    }
+
+    // Quando a porta estiver aberta e o jogador passar por dentro, transiciona de nivel
+    if (gLevel.hasDoor && gLevel.doorOpen)
+    {
+        float ddx = camX - gLevel.doorX;
+        float ddz = camZ - gLevel.doorZ;
+        if (ddx * ddx + ddz * ddz < 4.0f)
+        {
+            if (gLevel.currentLevel >= 3)
+            {
+                g.state = GameState::VITORIA;
+            }
+            else
+            {
+                gLevel.currentLevel++;
+                char mapPath[64];
+                std::snprintf(mapPath, sizeof(mapPath), "maps/level%d.txt", gLevel.currentLevel);
+                int savedLevel = gLevel.currentLevel;
+                if (loadLevel(gLevel, mapPath, GameConfig::TILE_SIZE))
                 {
-                    g.state = GameState::VITORIA; // Won the game!
-                }
-                else
-                {
-                    // Load next level
-                    gLevel.currentLevel++;
-                    char mapPath[64];
-                    std::snprintf(mapPath, sizeof(mapPath), "maps/level%d.txt", gLevel.currentLevel);
-                    int savedLevel = gLevel.currentLevel;
-                    if (loadLevel(gLevel, mapPath, GameConfig::TILE_SIZE))
-                    {
-                        gLevel.currentLevel = savedLevel;
-                        applySpawn(gLevel, camX, camZ);
-                        camY = GameConfig::PLAYER_EYE_Y;
-                        g.lightSystem.stateA = LightCycleState::ON;
-                        g.lightSystem.stateB = LightCycleState::OFF;
-                        g.lightSystem.timer = 0.0f;
-                        g.lightSystem.cycleCount = 0;
-                        g.levelTime = 0.0f; // reinicia tutorial no novo nivel
-                        gLevel.batteriesCollectedInMap = 0;
-                        audioInit(gAudioSys, gLevel);
-                    }
+                    gLevel.currentLevel = savedLevel;
+                    applySpawn(gLevel, camX, camZ);
+                    camY = GameConfig::PLAYER_EYE_Y;
+                    g.lightSystem.stateA = LightCycleState::ON;
+                    g.lightSystem.stateB = LightCycleState::OFF;
+                    g.lightSystem.timer = 0.0f;
+                    g.lightSystem.cycleCount = 0;
+                    g.levelTime = 0.0f;
+                    gLevel.batteriesCollectedInMap = 0;
+                    g.doorMessageTimer = 0.0f;
+                    g.doorMessageText  = nullptr;
+                    audioInit(gAudioSys, gLevel);
                 }
             }
         }
     }
+
 
     // 3. CHECAGEM DE GAME OVER
     if (g.player.health <= 0)
@@ -399,7 +431,7 @@ void drawWorld3D()
     }
 
     drawSkydome(camX, camY, camZ);
-    drawLevel(gLevel.map, camX, camZ, dirX, dirZ, g.r, g.time);
+    drawLevel(gLevel.map, camX, camZ, dirX, dirZ, g.r, g.time, gLevel.doorOpen);
     drawEntities(gLevel.enemies, gLevel.items, camX, camZ, dirX, dirZ, g.r);
     drawLightPosts(gLevel.posts, camX, camZ, dirX, dirZ);
 }
@@ -420,6 +452,9 @@ void gameRender()
     hs.damageAlpha = g.player.damageAlpha;
     hs.healthAlpha = g.player.healthAlpha;
     hs.flashlightOn = g.flashlightOn;
+    // Mensagem de porta bloqueada (fade baseado no timer)
+    hs.doorMessageAlpha = (g.doorMessageTimer > 0.0f) ? std::fmin(g.doorMessageTimer, 1.0f) : 0.0f;
+    hs.doorMessage = (hs.doorMessageAlpha > 0.0f) ? g.doorMessageText : nullptr;
 
     // --- ESTADO: MENU INICIAL ---
     if (g.state == GameState::MENU_INICIAL)

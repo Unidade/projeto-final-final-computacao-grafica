@@ -293,13 +293,16 @@ static void desenhaParedeCuboCompleto(float x, float z, GLuint texParedeX)
     glEnd();
 }
 
-// Desenha a porta de saída — um quad com textura de porta
-static void desenhaTileDoor(float x, float z, const RenderAssets &r)
+// Desenha a porta de saída — fechada: quad vertical com textura; aberta: apenas chão
+static void desenhaTileDoor(float x, float z, const RenderAssets &r, bool doorOpen)
 {
-    // Chão sob a porta
+    // Chão sob a porta (sempre presente)
     desenhaTileChao(x, z, r.texChao, false, r.texTeto);
 
-    // A porta em si: quad vertical no centro do tile
+    if (doorOpen)
+        return; // porta aberta: só mostra o chão, sem quad vertical
+
+    // A porta fechada: quad vertical no centro do tile
     float doorW = TILE * 0.8f;
     float doorH = WALL_H * 0.7f;
     float hw = doorW * 0.5f;
@@ -308,7 +311,7 @@ static void desenhaTileDoor(float x, float z, const RenderAssets &r)
     glColor3f(1, 1, 1);
     glBindTexture(GL_TEXTURE_2D, r.texDoor);
 
-    // Desenha em ambos os lados para ser visível de qualquer direção
+    // Visível dos dois lados
     glDisable(GL_CULL_FACE);
     glBegin(GL_QUADS);
     glNormal3f(0, 0, 1);
@@ -377,7 +380,7 @@ static void drawFace(float wx, float wz, int face, char neighbor, GLuint texPare
     }
 }
 
-void drawLevel(const MapLoader &map, float px, float pz, float dx, float dz, const RenderAssets &r, float time)
+void drawLevel(const MapLoader &map, float px, float pz, float dx, float dz, const RenderAssets &r, float time, bool doorOpen)
 {
     const auto &data = map.data();
     const int H = map.getHeight();
@@ -400,9 +403,11 @@ void drawLevel(const MapLoader &map, float px, float pz, float dx, float dz, con
 
             char c = data[z][x];
 
+            // 'D' é tratado separadamente — não inclua aqui para que o bloco
+            // else if (c == 'D') abaixo seja alcançado e a porta seja desenhada.
             bool isEntity = (c == 'J' || c == 'T' || c == 'M' || c == 'K' ||
                              c == 'G' || c == 'H' || c == 'V' || c == 'Y' ||
-                             c == 'E' || c == 'F' || c == 'I' || c == 'P' || c == 'D');
+                             c == 'E' || c == 'F' || c == 'I' || c == 'P');
 
             if (isEntity)
             {
@@ -455,7 +460,7 @@ void drawLevel(const MapLoader &map, float px, float pz, float dx, float dz, con
             }
             else if (c == 'D')
             {
-                desenhaTileDoor(wx, wz, r);
+                desenhaTileDoor(wx, wz, r, doorOpen);
             }
             else if (c == 'B')
             {

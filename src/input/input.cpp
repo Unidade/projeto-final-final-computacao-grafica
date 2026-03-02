@@ -6,7 +6,7 @@
 #include "input/keystate.h"
 #include "core/window.h"
 #include "graphics/menu.h"
-#include "core/game.h" // Adicione isso no topo
+#include "core/game.h"
 
 void keyboard(unsigned char key, int, int)
 {
@@ -88,7 +88,10 @@ void keyboard(unsigned char key, int, int)
         case 'D':
             keyD = true;
             break;
-        // R (reload) removed — no gun
+        case 'e':
+        case 'E':
+            keyE = true; // interação com porta
+            break;
         case 'f':
         case 'F':
             gameToggleFlashlight();
@@ -116,6 +119,10 @@ void keyboardUp(unsigned char key, int, int)
     case 'd':
     case 'D':
         keyD = false;
+        break;
+    case 'e':
+    case 'E':
+        keyE = false;
         break;
     }
 

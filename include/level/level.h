@@ -16,6 +16,10 @@ struct Level
     // Exit door position
     bool hasDoor = false;
     float doorX = 0.0f, doorZ = 0.0f;
+    bool doorOpen = false; // true = desbloqueada, jogador pode passar
+
+    // Posição de spawn do jogador (tile '9') — usada como centro da SafePost zone
+    float spawnX = 0.0f, spawnZ = 0.0f;
 
     // Objetivo local do mapa atual (baterias)
     int batteriesRequiredInMap = 0;
