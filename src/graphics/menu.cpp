@@ -375,27 +375,6 @@ void menuRenderGameOver(int screenW, int screenH, float tempo, const RenderAsset
     glEnd();
     glDisable(GL_BLEND);
 
-    // "FIM DE JOGO" is in the image; we add "Pressione ENTER para Reiniciar" as subtitle
-    const char *sub = "Pressione ENTER para Reiniciar";
-    float scaleSub = 0.22f;
-    float subW = 0.0f;
-    for (const char *p = sub; *p; ++p)
-        subW += glutStrokeWidth(GLUT_STROKE_ROMAN, *p);
-    subW *= scaleSub;
-
-    float xSub = (screenW - subW) / 2.0f;
-    float ySub = (screenH / 2.0f) - 90.0f;
-
-    float pulse = 0.5f + 0.5f * std::sin(tempo * 4.0f);
-    glColor3f(1.0f, 0.9f, 0.65f + 0.35f * pulse);
-    glLineWidth(3.0f);
-    glPushMatrix();
-    glTranslatef(xSub, ySub, 0);
-    glScalef(scaleSub, scaleSub, 1);
-    for (const char *p = sub; *p; ++p)
-        glutStrokeCharacter(GLUT_STROKE_ROMAN, *p);
-    glPopMatrix();
-
     end2D();
     glPopAttrib();
 }

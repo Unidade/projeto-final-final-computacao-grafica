@@ -527,7 +527,9 @@ void gameRender()
     // --- ESTADO: MENU INICIAL ---
     if (g.state == GameState::MENU_INICIAL)
     {
-        menuRender(janelaW, janelaH, g.time, "", "Pressione ENTER para Iniciar", g.r);
+        // A imagem de fundo já contém o texto de instrução;
+        // aqui não desenhamos título nem subtítulo extras.
+        menuRender(janelaW, janelaH, g.time, "", "", g.r);
     }
     // --- ESTADO: GAME OVER ---
     else if (g.state == GameState::GAME_OVER)
