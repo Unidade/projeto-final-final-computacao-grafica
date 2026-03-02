@@ -113,12 +113,28 @@ bool loadLevel(Level &lvl, const char *mapPath, float tileSize)
             }
             else if (c == 'P') // Poste de Luz
             {
-                LightPost lp;
-                lp.x = wx;
-                lp.z = wz;
-                lp.active    = true;
-                lp.intensity = 1.0f;
-                lvl.posts.push_back(lp);
+                float dx, dz, distSq;
+                bool tooClose = false;
+                for (const auto& p : lvl.posts)
+                {
+                    dx = wx - p.x;
+                    dz = wz - p.z;
+                    distSq = dx * dx + dz * dz;
+                    if (distSq < GameConfig::MIN_POST_DISTANCE * GameConfig::MIN_POST_DISTANCE)
+                    {
+                        tooClose = true;
+                        break;
+                    }
+                }
+                if (!tooClose)
+                {
+                    LightPost lp;
+                    lp.x = wx;
+                    lp.z = wz;
+                    lp.active    = true;
+                    lp.intensity = 1.0f;
+                    lvl.posts.push_back(lp);
+                }
             }
             else if (c == 'D') // Exit Door
             {

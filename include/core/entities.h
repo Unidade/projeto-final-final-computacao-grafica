@@ -6,7 +6,7 @@ void updateEntities(float dt);
 // Configurações da IA
 const float ENEMY_SPEED = 4.0f;
 const float ENEMY_WANDER_SPEED = 1.5f;
-const float ENEMY_VIEW_DIST = 15.0f;
+const float ENEMY_VIEW_DIST = 20.0f;
 const float ENEMY_ATTACK_DIST = 1.5f;
 const float WANDER_DIR_CHANGE_MIN = 2.0f;
 const float WANDER_DIR_CHANGE_MAX = 5.0f;
