@@ -17,6 +17,10 @@ struct Level
     bool hasDoor = false;
     float doorX = 0.0f, doorZ = 0.0f;
 
+    // Objetivo local do mapa atual (baterias)
+    int batteriesRequiredInMap = 0;
+    int batteriesCollectedInMap = 0;
+
     // Current level (1-3)
     int currentLevel = 1;
 
