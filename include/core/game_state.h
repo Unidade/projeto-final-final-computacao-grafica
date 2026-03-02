@@ -53,6 +53,10 @@ struct GameContext
     float time = 0.0f;
     float levelTime = 0.0f; // zerado a cada inicio de nivel
 
+    // Progresso de baterias no nivel atual
+    int batteriesCollectedInLevel = 0;
+    int batteriesRequiredInLevel = 0;
+
     bool flashlightOn = true;
 
     LightSystem lightSystem; // ciclo ON→FLICKER→OFF
