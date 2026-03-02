@@ -137,10 +137,13 @@ void updateEntities(float dt)
         if (en.hurtTimer > 0.0f)
             en.hurtTimer -= dt;
 
-        // --- LUZES APAGADAS: Monster only hunts when player is in darkness ---
-        bool playerInSafeZone = playerIsInSafeZone(
-            lvl.posts, camX, camZ, GameConfig::SAFE_ZONE_RADIUS);
-        bool playerVisibleToMonster = !playerInSafeZone && !g.flashlightOn;
+        // --- LUZES APAGADAS: Monster only hunts quando o jogador está claramente no escuro ---
+        // Usamos um raio levemente MAIOR para a IA, para não começar chase cedo demais
+        // quando o jogador ainda parece estar sob a luz do poste.
+        bool playerInSafeZoneForAI = playerIsInSafeZone(
+            lvl.posts, camX, camZ, GameConfig::SAFE_ZONE_RADIUS * 1.15f);
+
+        bool playerVisibleToMonster = !playerInSafeZoneForAI && !g.flashlightOn;
 
         float dx = camX - en.x;
         float dz = camZ - en.z;
@@ -174,7 +177,7 @@ void updateEntities(float dt)
         // Para o boss, a lanterna não oferece proteção — apenas os postes/safe zones.
         bool canSeePlayerNow = playerVisibleToMonster;
         if (isBoss)
-            canSeePlayerNow = !playerInSafeZone;
+            canSeePlayerNow = !playerInSafeZoneForAI;
 
         // Se o inimigo já está dentro de uma safe zone ativa, ele deve
         // imediatamente evitar ficar ali (não pode caçar/atacar de dentro da luz).
@@ -191,7 +194,7 @@ void updateEntities(float dt)
         // Regra forte: se o jogador está em uma safe zone ativa:
         // - Qualquer inimigo que esteja dentro ou muito perto da safe zone entra em RETREAT.
         // - Inimigos em CHASE/ATTACK fora do raio voltam para IDLE (não podem continuar caçando).
-        if (playerInSafeZone)
+        if (playerInSafeZoneForAI)
         {
             if (enemyInSafeZone || nearActivePost)
             {
@@ -217,13 +220,13 @@ void updateEntities(float dt)
                 {
                     // BOSS só respeita safe zones de poste, não a lanterna:
                     // ele recua quando o JOGADOR está protegido na luz.
-                    retreatDesired = playerInSafeZone;
+                    retreatDesired = playerInSafeZoneForAI;
                 }
                 else
                 {
                     // Inimigos comuns também são "espantados" quando perdem visão
                     // do jogador perto de um poste (ex: jogador liga a lanterna).
-                    retreatDesired = playerInSafeZone ||
+                    retreatDesired = playerInSafeZoneForAI ||
                                      (!playerVisibleToMonster &&
                                       dist < GameConfig::SAFE_ZONE_RADIUS * 1.5f);
                 }
@@ -334,7 +337,7 @@ void updateEntities(float dt)
 
             // Apenas inimigos comuns usam memória de perseguição; o boss persegue
             // continuamente enquanto o jogador não estiver em uma safe zone.
-            if (!isBoss && !playerVisibleToMonster && memory > 0.0f && !playerInSafeZone)
+            if (!isBoss && !playerVisibleToMonster && memory > 0.0f && !playerInSafeZoneForAI)
             {
                 if (en.chaseMemoryTimer <= 0.0f)
                     en.chaseMemoryTimer = memory;
@@ -346,12 +349,13 @@ void updateEntities(float dt)
             if (isBoss)
             {
                 // O boss só “perde” o jogador quando ele entra numa safe zone.
-                if (playerInSafeZone)
+                if (playerInSafeZoneForAI)
                     lostPlayer = true;
             }
             else
             {
-                lostPlayer = !playerVisibleToMonster && (en.chaseMemoryTimer <= 0.0f || playerInSafeZone);
+                lostPlayer = !playerVisibleToMonster &&
+                             (en.chaseMemoryTimer <= 0.0f || playerInSafeZoneForAI);
             }
             if (lostPlayer)
             {
@@ -399,7 +403,7 @@ void updateEntities(float dt)
         {
             bool canAttackNow = playerVisibleToMonster;
             if (isBoss)
-                canAttackNow = !playerInSafeZone;
+                canAttackNow = !playerInSafeZoneForAI;
 
             if (!canAttackNow)
             {
