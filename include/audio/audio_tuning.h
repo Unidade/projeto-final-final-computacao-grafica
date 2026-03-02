@@ -38,11 +38,11 @@ namespace AudioTuning
     // maxDist: depois disso praticamente não ouve
     static constexpr float ENEMY_REF_DIST = 1.20f;
     static constexpr float ENEMY_ROLLOFF = 2.85f;
-    static constexpr float ENEMY_MAX_DIST = 7.00f;
+    static constexpr float ENEMY_MAX_DIST = 9.00f;
 
     // Histerese de liga/desliga do loop (pra não ficar ligando/desligando toda hora)
-    static constexpr float ENEMY_START_DIST = 5.50f;
-    static constexpr float ENEMY_STOP_DIST = 6.50f;
+    static constexpr float ENEMY_START_DIST = 7.00f;
+    static constexpr float ENEMY_STOP_DIST = 8.50f;
 
     // ===== Grito aleatório do inimigo (3D) =====
     static constexpr float ENEMY_SCREAM_GAIN = 1.40f;         // volume do grito

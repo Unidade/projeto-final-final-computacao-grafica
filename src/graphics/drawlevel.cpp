@@ -569,7 +569,7 @@ void drawEntities(const std::vector<Enemy> &enemies, const std::vector<Item> &it
 
         inst.rot_y = AvatarSystem::lookAtRotation(en.x, en.z, camX, camZ);
 
-        AvatarSystem::renderInstance(inst);
+        AvatarSystem::renderInstance(inst, en.typeEnum);
     }
 
     glEnable(GL_LIGHTING);

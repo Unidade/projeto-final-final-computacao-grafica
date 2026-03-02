@@ -157,10 +157,25 @@ bool gameInit(const char *mapPath)
     g.r.progSangue = gAssets.progSangue;
     g.r.progTransition = gAssets.progTransition;
 
-    // Carrega o modelo 3D do inimigo avatar (GLB)
-    if (!AvatarSystem::loadModel("assets/enemies/inimigo_fase.glb"))
+    // Carrega os modelos 3D dos inimigos avatar (GLB) por tipo
+    bool okBasic = AvatarSystem::loadModelForType(EnemyType::BASIC, "assets/enemies/inimigo_fase.glb");
+    bool okStalker = AvatarSystem::loadModelForType(EnemyType::STALKER, "assets/enemies/inimigo_fase_2.glb");
+    bool okBoss = AvatarSystem::loadModelForType(EnemyType::BOSS, "assets/enemies/inimigo_fase_3.glb");
+    if (!okBasic)
     {
-        printf("[Game] Warning: Could not load avatar enemy model. Avatar enemies will not be rendered.\n");
+        printf("[Game] Warning: Could not load basic avatar enemy model.\n");
+    }
+    if (!okStalker)
+    {
+        printf("[Game] Warning: Could not load stalker avatar enemy model.\n");
+    }
+    if (!okBoss)
+    {
+        printf("[Game] Warning: Could not load boss avatar enemy model.\n");
+    }
+    if (!okBasic && !okStalker && !okBoss)
+    {
+        printf("[Game] Warning: No avatar enemy models loaded. Avatar enemies will not be rendered.\n");
     }
 
     if (!loadLevel(gLevel, mapPath, GameConfig::TILE_SIZE))

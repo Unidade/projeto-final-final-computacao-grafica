@@ -126,33 +126,37 @@ void audioInit(AudioSystem& a, const Level& level) {
 
     a.engine.setDistanceModel();
 
-    a.bufAmbient = a.engine.loadWav("assets/audio/ambient_mono.wav");
+    // Ambient: main spooky background loop (no fallbacks)
+    a.bufAmbient = a.engine.loadWav("assets/audio/music/music_ambient_loop.wav");
 
+    // Chase music
     a.bufChase = a.engine.loadWav("assets/audio/music/music_chase.wav");
 
-    a.bufStep = a.engine.loadWav("assets/audio/sfx/sfx_step_concrete_01.wav");
-    if (!a.bufStep) a.bufStep = a.engine.loadWav("assets/audio/step_mono.wav");
-    if (!a.bufStep) a.bufStep = a.engine.loadWav("assets/audio/step.wav");
+    // Player footsteps
+    a.bufStep = a.engine.loadWav("assets/audio/sfx/sfx_step_concrete_01_mono.wav");
 
+    // Generic enemy loop (3D base hum)
     a.bufEnemy = a.engine.loadWav("assets/audio/enemy_mono.wav");
-    if (!a.bufEnemy) a.bufEnemy = a.engine.loadWav("assets/audio/enemy.wav");
 
-    a.bufClickReload = a.engine.loadWav("assets/audio/sfx/sfx_door_locked.wav");
-    if (!a.bufClickReload) a.bufClickReload = a.engine.loadWav("assets/audio/click_reload_mono.wav");
+    // Door locked / battery pickup click
+    a.bufClickReload = a.engine.loadWav("assets/audio/sfx/sfx_door_locked_mono.wav");
 
+    // Enemy death
     a.bufKill = a.engine.loadWav("assets/audio/kill_mono.wav");
 
+    // Enemy random scream
     a.bufEnemyScream = a.engine.loadWav("assets/audio/enemy_scream_mono.wav");
 
+    // Player hurt
     a.bufHurt = a.engine.loadWav("assets/audio/hurt_mono.wav");
-    if (!a.bufHurt) a.bufHurt = a.engine.loadWav("assets/audio/hurt.wav");
 
-
+    // Monster state SFX (chase / attack / idle / spot)
     a.bufMonsterChase = a.engine.loadWav("assets/audio/sfx/sfx_monster_chase.wav");
-    a.bufMonsterAttack = a.engine.loadWav("assets/audio/sfx/sfx_monster_attack.wav");
+    a.bufMonsterAttack = a.engine.loadWav("assets/audio/sfx/sfx_monster_attack_mono.wav");
     a.bufMonsterIdle = a.engine.loadWav("assets/audio/sfx/sfx_monster_idle.wav");
     a.bufMonsterSpot = a.engine.loadWav("assets/audio/sfx/sfx_monster_spot.wav");
 
+    // Player low-health breathing
     a.bufBreath = a.engine.loadWav("assets/audio/breath_mono.wav");
 
     // Ambient (2D loop)
@@ -336,7 +340,8 @@ void audioUpdate(
                 float dx = en.x - listener.pos.x;
                 float dz = en.z - listener.pos.z;
                 float dist = std::sqrt(dx * dx + dz * dz);
-                if (dist <= ENEMY_VIEW_DIST) {
+                float chaseView = getEnemyViewDist(en.typeEnum);
+                if (dist <= chaseView) {
                     anyChasing = true;
                     break;
                 }

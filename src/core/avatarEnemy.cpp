@@ -8,6 +8,7 @@
 namespace AvatarSystem
 {
   AvatarModel g_avatarModel;
+  AvatarModel g_avatarModels[3];
 }
 
 bool AvatarModel::load(const char *path)
@@ -89,12 +90,48 @@ namespace AvatarSystem
 {
   bool loadModel(const char *path)
   {
-    return g_avatarModel.load(path);
+    // Backwards compatibility: load as BASIC
+    return loadModelForType(EnemyType::BASIC, path);
   }
 
   void clearModel()
   {
     g_avatarModel.clear();
+    for (int i = 0; i < 3; ++i)
+      g_avatarModels[i].clear();
+  }
+
+  void clearModels()
+  {
+    clearModel();
+  }
+
+  bool loadModelForType(EnemyType t, const char *path)
+  {
+    int idx = static_cast<int>(t);
+    if (idx < 0 || idx >= 3)
+      idx = 0;
+
+    bool ok = g_avatarModels[idx].load(path);
+    // Keep single-model copy for any legacy use
+    if (ok && t == EnemyType::BASIC)
+      g_avatarModel = g_avatarModels[idx];
+    return ok;
+  }
+
+  const AvatarModel *getModelForType(EnemyType t)
+  {
+    int idx = static_cast<int>(t);
+    if (idx < 0 || idx >= 3)
+      idx = 0;
+
+    AvatarModel *model = &g_avatarModels[idx];
+    if (!model->loaded)
+      model = &g_avatarModels[(int)EnemyType::BASIC];
+    if (!model->loaded)
+      model = &g_avatarModel;
+
+    return model->loaded ? model : nullptr;
   }
 
   float lookAtRotation(float fromX, float fromZ, float toX, float toZ)
@@ -106,7 +143,16 @@ namespace AvatarSystem
 
   void renderInstance(const AvatarEnemyInstance &inst)
   {
-    if (!inst.active || !g_avatarModel.loaded)
+    renderInstance(inst, EnemyType::BASIC);
+  }
+
+  void renderInstance(const AvatarEnemyInstance &inst, EnemyType type)
+  {
+    if (!inst.active)
+      return;
+
+    const AvatarModel *model = getModelForType(type);
+    if (!model)
       return;
 
     const float MODEL_SCALE = 2.5f;
@@ -134,7 +180,7 @@ namespace AvatarSystem
 
     bool isHurt = (inst.hurtTimer > 0.0f);
 
-    for (const AvatarMesh &m : g_avatarModel.meshes)
+    for (const AvatarMesh &m : model->meshes)
     {
       if (m.index_count == 0 || m.positions.empty())
         continue;
