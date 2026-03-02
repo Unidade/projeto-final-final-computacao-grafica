@@ -54,6 +54,16 @@ AudioSystem &gameAudio() { return gAudioSys; }
 
 Level &gameLevel() { return gLevel; }
 
+static int countBatteriesInLevel(const Level &lvl)
+{
+    int count = 0;
+    for (const auto &item : lvl.items)
+    {
+        if (item.type == ITEM_BATTERY) count++;
+    }
+    return count;
+}
+
 GameState gameGetState() { return g.state; }
 
 void gameSetState(GameState s) { g.state = s; }
@@ -158,6 +168,8 @@ bool gameInit(const char *mapPath)
     g.player = PlayerState{};
     g.weapon = WeaponAnim{};
     g.flashlightOn = true;
+    g.batteriesCollectedInLevel = 0;
+    g.batteriesRequiredInLevel = countBatteriesInLevel(gLevel);
 
     return true;
 }
@@ -172,6 +184,8 @@ void gameReset()
     g.player.batteryCharge      = 100.0f;
     g.player.darknessDamageTimer= 0.0f;
     g.player.batteriesCollected = 0;
+    g.batteriesCollectedInLevel = 0;
+    g.batteriesRequiredInLevel = countBatteriesInLevel(gLevel);
     for (int i = 0; i < 4; i++) g.player.hasLevelKey[i] = false;
 
     g.weapon.state = WeaponState::W_IDLE;
@@ -264,7 +278,7 @@ void gameUpdate(float dt)
         float ddz = camZ - gLevel.doorZ;
         if (ddx * ddx + ddz * ddz < 4.0f) // within 2 units of door
         {
-            bool hasBatteries = (g.player.batteriesCollected >= GameConfig::BATTERIES_REQUIRED);
+            bool hasBatteries = (g.batteriesCollectedInLevel >= g.batteriesRequiredInLevel);
             int cl = gLevel.currentLevel;
             bool hasKey = (cl >= 1 && cl <= 3 && g.player.hasLevelKey[cl]);
 
@@ -299,6 +313,8 @@ void gameUpdate(float dt)
                     g.lightSystem.timer = 0.0f;
                     g.lightSystem.cycleCount = 0;
                     g.levelTime = 0.0f; // reinicia tutorial no novo nivel
+                    g.batteriesCollectedInLevel = 0;
+                    g.batteriesRequiredInLevel = countBatteriesInLevel(gLevel);
                     audioInit(gAudioSys, gLevel);
                 }
             }
@@ -382,8 +398,8 @@ void gameRender()
     // Monta o estado do HUD a partir das variáveis globais do jogo
     HudState hs;
     hs.playerHealth = g.player.health;
-    hs.batteriesCollected = g.player.batteriesCollected;
-    hs.batteriesRequired = GameConfig::BATTERIES_REQUIRED;
+    hs.batteriesCollected = g.batteriesCollectedInLevel;
+    hs.batteriesRequired = g.batteriesRequiredInLevel;
     int cl = gLevel.currentLevel;
     hs.currentLevel = cl;
     hs.hasLevelKey = (cl >= 1 && cl <= 3) && g.player.hasLevelKey[cl];
