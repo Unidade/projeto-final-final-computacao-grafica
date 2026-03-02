@@ -293,35 +293,40 @@ static void desenhaParedeCuboCompleto(float x, float z, GLuint texParedeX)
     glEnd();
 }
 
-// Desenha a porta de saída — fechada: quad vertical com textura; aberta: apenas chão
+// Desenha a porta de saída — fechada: quad vertical na face norte do tile (contra a parede sul);
+// aberta: apenas chão.
 static void desenhaTileDoor(float x, float z, const RenderAssets &r, bool doorOpen)
 {
     // Chão sob a porta (sempre presente)
     desenhaTileChao(x, z, r.texChao, false, r.texTeto);
 
     if (doorOpen)
-        return; // porta aberta: só mostra o chão, sem quad vertical
+        return; // porta aberta: só o chão, sem obstrução
 
-    // A porta fechada: quad vertical no centro do tile
-    float doorW = TILE * 0.8f;
-    float doorH = WALL_H * 0.7f;
-    float hw = doorW * 0.5f;
+    // Porta fechada: quad vertical na face NORTE do tile (face voltada para o jogador
+    // que se aproxima pelo interior do mapa).
+    float half    = TILE * 0.5f;
+    float doorW   = TILE;          // ocupa toda a largura do tile
+    float doorH   = WALL_H * 0.85f;
+    float hw      = doorW * 0.5f;
+    float faceZ   = z - half;      // face norte = limite sul da célula interior vizinha
 
     glUseProgram(0);
     glColor3f(1, 1, 1);
     glBindTexture(GL_TEXTURE_2D, r.texDoor);
 
-    // Visível dos dois lados
+    // Visível dos dois lados (jogador pode ver de perto)
     glDisable(GL_CULL_FACE);
     glBegin(GL_QUADS);
     glNormal3f(0, 0, 1);
-    glTexCoord2f(0, 1); glVertex3f(x - hw, 0.0f, z);
-    glTexCoord2f(1, 1); glVertex3f(x + hw, 0.0f, z);
-    glTexCoord2f(1, 0); glVertex3f(x + hw, doorH, z);
-    glTexCoord2f(0, 0); glVertex3f(x - hw, doorH, z);
+    glTexCoord2f(0, 1); glVertex3f(x - hw, 0.0f, faceZ);
+    glTexCoord2f(1, 1); glVertex3f(x + hw, 0.0f, faceZ);
+    glTexCoord2f(1, 0); glVertex3f(x + hw, doorH, faceZ);
+    glTexCoord2f(0, 0); glVertex3f(x - hw, doorH, faceZ);
     glEnd();
     glEnable(GL_CULL_FACE);
 }
+
 
 static void desenhaTileSangue(float x, float z, const RenderAssets &r, float time)
 {

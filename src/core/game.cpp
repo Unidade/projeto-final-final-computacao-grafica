@@ -31,6 +31,7 @@
 
 #include "utils/assets.h"
 #include "core/config.h"
+#include "level/level_validation.h"
 
 #include "core/window.h"
 #include "core/avatarEnemy.h"
@@ -154,6 +155,9 @@ bool gameInit(const char *mapPath)
     if (!loadLevel(gLevel, mapPath, GameConfig::TILE_SIZE))
         return false;
 
+    // Valida alcancabilidade de todos os elementos do nivel (dev)
+    validateLevel(gLevel, 1);
+
     applySpawn(gLevel, camX, camZ);
     camY = GameConfig::PLAYER_EYE_Y;
 
@@ -203,6 +207,7 @@ void gameReset()
     // Reload level 1
     loadLevel(gLevel, "maps/level1.txt", GameConfig::TILE_SIZE);
     gLevel.currentLevel = 1;
+    validateLevel(gLevel, 1);
     applySpawn(gLevel, camX, camZ);
     camY = GameConfig::PLAYER_EYE_Y;
     audioInit(gAudioSys, gLevel);
@@ -284,7 +289,15 @@ void gameUpdate(float dt)
     {
         float ddx = camX - gLevel.doorX;
         float ddz = camZ - gLevel.doorZ;
-        bool nearDoor = (ddx * ddx + ddz * ddz < 9.0f); // 3 unidades
+        // Raio de 6 unidades (1.5 tiles) — o jogador fica a ~4 unid do centro da porta
+        bool nearDoor = (ddx * ddx + ddz * ddz < 36.0f);
+
+        // Mostra dica "Pressione E" quando perto da porta
+        if (nearDoor && g.doorMessageTimer <= 0.0f)
+        {
+            g.doorMessageText  = "Pressione E para interagir";
+            g.doorMessageTimer = 0.1f; // refreshes each frame player stays close
+        }
 
         if (nearDoor && keyE)
         {
@@ -342,6 +355,8 @@ void gameUpdate(float dt)
                     gLevel.currentLevel = savedLevel;
                     applySpawn(gLevel, camX, camZ);
                     camY = GameConfig::PLAYER_EYE_Y;
+                    // Valida o novo nivel carregado
+                    validateLevel(gLevel, savedLevel);
                     g.lightSystem.stateA = LightCycleState::ON;
                     g.lightSystem.stateB = LightCycleState::OFF;
                     g.lightSystem.timer = 0.0f;
