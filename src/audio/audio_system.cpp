@@ -127,10 +127,14 @@ void audioInit(AudioSystem& a, const Level& level) {
     a.engine.setDistanceModel();
 
     // Ambient: main spooky background loop (no fallbacks)
-    a.bufAmbient = a.engine.loadWav("assets/audio/music/music_ambient_loop.wav");
+    // Usa a nova faixa normalizada music_ambient_mono.wav
+    a.bufAmbient = a.engine.loadWav("assets/audio/music/music_ambient_mono.wav");
 
     // Chase music
     a.bufChase = a.engine.loadWav("assets/audio/music/music_chase.wav");
+
+    // Victory music (played on VITORIA screen)
+    a.bufVictory = a.engine.loadWav("assets/audio/music/music_victory_mono.wav");
 
     // Player footsteps
     a.bufStep = a.engine.loadWav("assets/audio/sfx/sfx_step_concrete_01_mono.wav");
@@ -177,6 +181,17 @@ void audioInit(AudioSystem& a, const Level& level) {
             a.engine.setSourcePos(a.srcChase, {0.0f, 0.0f, 0.0f});
             a.engine.setSourceDistance(a.srcChase, 1.0f, 0.0f, 1000.0f);
             a.engine.setSourceGain(a.srcChase, 0.0f);
+        }
+    }
+
+    // Victory music (2D loop, started/stopped manually from game state)
+    if (a.bufVictory) {
+        a.srcVictory = a.engine.createSource(a.bufVictory, true);
+        if (a.srcVictory) {
+            alSourcei(a.srcVictory, AL_SOURCE_RELATIVE, AL_TRUE);
+            a.engine.setSourcePos(a.srcVictory, {0.0f, 0.0f, 0.0f});
+            a.engine.setSourceDistance(a.srcVictory, 1.0f, 0.0f, 1000.0f);
+            a.engine.setSourceGain(a.srcVictory, AudioTuning::MASTER * AudioTuning::AMBIENT_GAIN);
         }
     }
 

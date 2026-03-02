@@ -13,7 +13,7 @@ namespace AudioTuning
     // 0.8f = um pouco mais alto
     // 1.0f = padrão “cheio"
     // 1.2f / 1.5f = bem alto (cuidado pra não estourar)
-    static constexpr float AMBIENT_GAIN = 0.42f; // levemente mais alto para música ambiente
+    static constexpr float AMBIENT_GAIN = 0.7f; // levemente mais alto para música ambiente
     static constexpr float CHASE_GAIN = 0.33f;
     static constexpr float STEP_GAIN = 0.48f;
     static constexpr float PUMP_GAIN = 0.78f; // door locked / battery pickup

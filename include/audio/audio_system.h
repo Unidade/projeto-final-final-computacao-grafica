@@ -24,6 +24,7 @@ struct AudioSystem {
     // Buffers
     ALuint bufAmbient = 0;
     ALuint bufChase = 0;
+    ALuint bufVictory = 0;
     ALuint bufStep = 0;
     ALuint bufHurt = 0;
     ALuint bufClickReload = 0;
@@ -42,6 +43,7 @@ struct AudioSystem {
     // Sources
     ALuint srcAmbient = 0;
     ALuint srcChase = 0;
+    ALuint srcVictory = 0;
     ALuint srcStep = 0;
     ALuint srcHurt = 0;
     ALuint srcClickReload = 0;
@@ -50,6 +52,7 @@ struct AudioSystem {
     ALuint srcBreath = 0;
 
     bool stepPlaying = false;
+    bool victoryPlaying = false;
 
     // Inimigos
     std::vector<ALuint> srcEnemies;       // loop 3D por inimigo (usado para chase/idle)

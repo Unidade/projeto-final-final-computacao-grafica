@@ -37,6 +37,12 @@ int main(int argc, char **argv)
     glutInitWindowSize(janelaW, janelaH);
     glutCreateWindow("Luzes Apagadas");
 
+#ifdef _WIN32
+    // Start in fullscreen mode on Windows
+    glutFullScreen();
+    fullScreen = true;
+#endif
+
     GLenum err = glewInit();
     if (err != GLEW_OK)
     {

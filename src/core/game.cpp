@@ -537,6 +537,25 @@ void gameRender()
     // --- ESTADO: VITORIA ---
     else if (g.state == GameState::VITORIA)
     {
+        // Garante que a música de vitória esteja tocando (e chase/ambient estejam silenciosos)
+        {
+            auto &a = gameAudio();
+            if (a.ok && a.bufVictory && a.srcVictory)
+            {
+                if (!a.victoryPlaying)
+                {
+                    // Silencia música de chase e ambiente
+                    if (a.srcChase) a.engine.setSourceGain(a.srcChase, 0.0f);
+                    if (a.srcAmbient) a.engine.setSourceGain(a.srcAmbient, 0.0f);
+                    a.engine.stop(a.srcChase);
+
+                    a.engine.setSourceGain(a.srcVictory, AudioTuning::MASTER * AudioTuning::AMBIENT_GAIN);
+                    a.engine.play(a.srcVictory);
+                    a.victoryPlaying = true;
+                }
+            }
+        }
+
         drawWorld3D();
         menuRender(janelaW, janelaH, g.time, "VOCE ESCAPOU!", "Pressione ENTER para Jogar Novamente", g.r);
     }
