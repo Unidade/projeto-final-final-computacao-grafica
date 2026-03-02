@@ -6,6 +6,7 @@
 #include "graphics/drawlevel.h"
 #include "level/levelmetrics.h"
 #include "utils/utils.h"
+#include "core/config.h"
 #include <cstdio>
 
 // =====================
@@ -588,10 +589,11 @@ void drawLightPosts(const std::vector<LightPost> &posts,
     glDisable(GL_TEXTURE_2D);
     glDisable(GL_LIGHTING);
 
-    // aperção do cone visual: deve bater com GL_SPOT_CUTOFF
-    const float CONE_DEG = 55.0f;
+    // Raio visual da safe zone no chão: deve bater com o raio lógico
+    // usado pela IA (GameConfig::SAFE_ZONE_RADIUS), para que o anel
+    // corresponda exatamente à área considerada segura.
+    const float coneRad = GameConfig::SAFE_ZONE_RADIUS;
     const float PI = 3.14159265f;
-    const float coneRad = tanf(CONE_DEG * PI / 180.0f) * CEILING_H;
     const int CONE_SEGS = 24;
 
     for (const auto &p : posts)
