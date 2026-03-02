@@ -2,6 +2,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <ctime>
 #include <cfloat>
 
 #include "core/game_enums.h"
@@ -95,6 +96,8 @@ bool gameInit(const char *mapPath)
     glLightf(GL_LIGHT3, GL_LINEAR_ATTENUATION,    0.0f);
     glLightf(GL_LIGHT3, GL_QUADRATIC_ATTENUATION, 0.0f);
     glDisable(GL_LIGHT3);
+
+    std::srand((unsigned)std::time(nullptr));
 
     if (!loadAssets(gAssets))
         return false;

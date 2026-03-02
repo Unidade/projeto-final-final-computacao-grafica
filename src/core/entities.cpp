@@ -6,6 +6,7 @@
 #include "audio/audio_system.h"
 #include <cmath>
 #include <cstdlib>
+#include <ctime>
 
 bool isWalkable(float x, float z)
 {
@@ -47,6 +48,7 @@ void updateEntities(float dt)
                 en.x = en.startX;
                 en.z = en.startZ;
                 en.hurtTimer = 0.0f;
+                en.wanderTimer = 0.0f;  // pick fresh wander dir
             }
             continue;
         }
@@ -84,15 +86,20 @@ void updateEntities(float dt)
                 en.state = STATE_CHASE;
                 break;
             }
-            // Wander randomly for spookiness — enemies drift around the map
-            en.wanderTimer -= dt;
-            if (en.wanderTimer <= 0.0f)
+            // Wander: pick new direction when timer expires or direction invalid
+            bool needNewDir = (en.wanderTimer <= 0.0f) ||
+                             (en.wanderDirX == 0.0f && en.wanderDirZ == 0.0f);
+            if (needNewDir)
             {
                 float angle = (float)(std::rand() % 360) * (3.14159265f / 180.0f);
                 en.wanderDirX = std::cos(angle);
                 en.wanderDirZ = std::sin(angle);
                 float range = WANDER_DIR_CHANGE_MAX - WANDER_DIR_CHANGE_MIN;
                 en.wanderTimer = WANDER_DIR_CHANGE_MIN + (float)(std::rand() % 100) / 100.0f * range;
+            }
+            else
+            {
+                en.wanderTimer -= dt;
             }
             float moveStep = ENEMY_WANDER_SPEED * dt;
             float nextX = en.x + en.wanderDirX * moveStep;
@@ -101,10 +108,12 @@ void updateEntities(float dt)
                 lvl.posts, nextX, en.z, GameConfig::SAFE_ZONE_RADIUS);
             bool nextInSafeZoneZ = isPositionInSafeZone(
                 lvl.posts, en.x, nextZ, GameConfig::SAFE_ZONE_RADIUS);
-            if (isWalkable(nextX, en.z) && !nextInSafeZoneX) en.x = nextX;
-            else en.wanderTimer = 0.0f; // hit wall, pick new dir next frame
-            if (isWalkable(en.x, nextZ) && !nextInSafeZoneZ) en.z = nextZ;
-            else en.wanderTimer = 0.0f;
+            bool canMoveX = isWalkable(nextX, en.z) && !nextInSafeZoneX;
+            bool canMoveZ = isWalkable(en.x, nextZ) && !nextInSafeZoneZ;
+            if (canMoveX) en.x = nextX;
+            else en.wanderDirX = -en.wanderDirX;  // bounce off wall
+            if (canMoveZ) en.z = nextZ;
+            else en.wanderDirZ = -en.wanderDirZ;
             break;
         }
 
