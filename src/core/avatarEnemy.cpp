@@ -109,7 +109,7 @@ namespace AvatarSystem
     if (!inst.active || !g_avatarModel.loaded)
       return;
 
-    const float MODEL_SCALE = 1.06f;
+    const float MODEL_SCALE = 2.5f;
     const float Y_OFFSET = 0.0f;
 
     glPushAttrib(GL_ALL_ATTRIB_BITS);
