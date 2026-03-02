@@ -7,6 +7,80 @@
 #include <cmath>
 #include <cstdlib>
 #include <ctime>
+#include <cfloat>
+
+EnemyType enemyTypeFromInt(int typeIndex)
+{
+    switch (typeIndex)
+    {
+    case 2:
+        return EnemyType::BOSS;
+    case 1:
+    case 4:
+        return EnemyType::STALKER;
+    case 0:
+    case 3:
+    default:
+        return EnemyType::BASIC;
+    }
+}
+
+float getEnemySpeed(EnemyType t)
+{
+    switch (t)
+    {
+    case EnemyType::STALKER:
+        return ENEMY_SPEED * 1.2f;
+    case EnemyType::BOSS:
+        return ENEMY_SPEED * 1.5f;
+    case EnemyType::BASIC:
+    default:
+        return ENEMY_SPEED;
+    }
+}
+
+float getEnemyViewDist(EnemyType t)
+{
+    switch (t)
+    {
+    case EnemyType::STALKER:
+        return ENEMY_VIEW_DIST * 1.3f;
+    case EnemyType::BOSS:
+        // Effectively global on typical map sizes, still finite for audio falloff
+        return ENEMY_VIEW_DIST * 4.0f;
+    case EnemyType::BASIC:
+    default:
+        return ENEMY_VIEW_DIST;
+    }
+}
+
+float getEnemyWanderSpeed(EnemyType t)
+{
+    switch (t)
+    {
+    case EnemyType::STALKER:
+        return ENEMY_WANDER_SPEED * 1.1f;
+    case EnemyType::BOSS:
+        return ENEMY_WANDER_SPEED * 1.2f;
+    case EnemyType::BASIC:
+    default:
+        return ENEMY_WANDER_SPEED;
+    }
+}
+
+float getEnemyAggroMemory(EnemyType t)
+{
+    switch (t)
+    {
+    case EnemyType::STALKER:
+        return 2.5f; // seconds of extra chase after losing visibility
+    case EnemyType::BOSS:
+        return 4.0f;
+    case EnemyType::BASIC:
+    default:
+        return 0.0f;
+    }
+}
 
 bool isWalkable(float x, float z)
 {
@@ -59,19 +133,6 @@ void updateEntities(float dt)
         if (en.hurtTimer > 0.0f)
             en.hurtTimer -= dt;
 
-        // --- LUZES APAGADAS: Enemies freeze inside safe zones ---
-        // If the enemy is inside the illuminated area of any active light post,
-        // it cannot move or attack — it stays idle.
-        bool enemyInSafeZone = isPositionInSafeZone(
-            lvl.posts, en.x, en.z, GameConfig::SAFE_ZONE_RADIUS);
-
-        if (enemyInSafeZone)
-        {
-            // Enemy is in the light — frozen, can't chase
-            en.state = STATE_IDLE;
-            continue;
-        }
-
         // --- LUZES APAGADAS: Monster only hunts when player is in darkness ---
         bool playerInSafeZone = playerIsInSafeZone(
             lvl.posts, camX, camZ, GameConfig::SAFE_ZONE_RADIUS);
@@ -81,13 +142,43 @@ void updateEntities(float dt)
         float dz = camZ - en.z;
         float dist = std::sqrt(dx * dx + dz * dz);
 
+        // Procura o poste ativo mais próximo para lógica de retreat
+        const LightPost *nearestPost = nullptr;
+        float nearestPostDistSq = FLT_MAX;
+        for (const auto &p : lvl.posts)
+        {
+            if (!p.active || p.intensity <= 0.05f)
+                continue;
+            float pdx = en.x - p.x;
+            float pdz = en.z - p.z;
+            float d2 = pdx * pdx + pdz * pdz;
+            if (d2 < nearestPostDistSq)
+            {
+                nearestPostDistSq = d2;
+                nearestPost = &p;
+            }
+        }
+        float dPost = nearestPost ? std::sqrt(nearestPostDistSq) : FLT_MAX;
+        float viewDist = getEnemyViewDist(en.typeEnum);
+
+        bool nearActivePost = nearestPost && (dPost < GameConfig::SAFE_ZONE_RADIUS * 0.9f);
+        bool retreatDesired = nearActivePost &&
+                              (playerInSafeZone ||
+                               (!playerVisibleToMonster && dist < GameConfig::SAFE_ZONE_RADIUS * 1.5f));
+
+        if (retreatDesired && en.state != STATE_DEAD)
+        {
+            en.state = STATE_RETREAT;
+        }
+
         switch (en.state)
         {
         case STATE_IDLE:
         {
-            if (playerVisibleToMonster && dist < ENEMY_VIEW_DIST)
+            if (playerVisibleToMonster && dist < viewDist)
             {
                 en.state = STATE_CHASE;
+                en.chaseMemoryTimer = getEnemyAggroMemory(en.typeEnum);
                 break;
             }
             // Wander: pick new direction when timer expires or direction invalid
@@ -105,7 +196,7 @@ void updateEntities(float dt)
             {
                 en.wanderTimer -= dt;
             }
-            float moveStep = ENEMY_WANDER_SPEED * dt;
+            float moveStep = getEnemyWanderSpeed(en.typeEnum) * dt;
             float nextX = en.x + en.wanderDirX * moveStep;
             float nextZ = en.z + en.wanderDirZ * moveStep;
             bool nextInSafeZoneX = isPositionInSafeZone(
@@ -126,17 +217,32 @@ void updateEntities(float dt)
         }
 
         case STATE_CHASE:
-            if (!playerVisibleToMonster)
+        {
+            float memory = getEnemyAggroMemory(en.typeEnum);
+
+            if (!playerVisibleToMonster && memory > 0.0f && !playerInSafeZone)
             {
-                en.state = STATE_IDLE; // Player entered light — monster loses track
-                en.wanderTimer = 0.0f; // pick new wander dir immediately
+                if (en.chaseMemoryTimer <= 0.0f)
+                    en.chaseMemoryTimer = memory;
+                else
+                    en.chaseMemoryTimer -= dt;
             }
-            else if (dist < ENEMY_ATTACK_DIST)
+
+            bool lostPlayer = !playerVisibleToMonster && (en.chaseMemoryTimer <= 0.0f || playerInSafeZone);
+            if (lostPlayer)
+            {
+                en.state = STATE_IDLE; // Player protegido ou longe demais
+                en.wanderTimer = 0.0f; // pick new wander dir immediately
+                en.chaseMemoryTimer = 0.0f;
+                break;
+            }
+
+            if (dist < ENEMY_ATTACK_DIST)
             {
                 en.state = STATE_ATTACK;
                 en.attackCooldown = 0.5f;
             }
-            else if (dist > ENEMY_VIEW_DIST * 1.5f)
+            else if (dist > viewDist * 1.5f && en.typeEnum != EnemyType::BOSS)
             {
                 en.state = STATE_IDLE;
                 en.wanderTimer = 0.0f;
@@ -146,7 +252,7 @@ void updateEntities(float dt)
                 float dirX = dx / dist;
                 float dirZ = dz / dist;
 
-                float moveStep = ENEMY_SPEED * dt;
+                float moveStep = getEnemySpeed(en.typeEnum) * dt;
 
                 float nextX = en.x + dirX * moveStep;
                 float nextZ = en.z + dirZ * moveStep;
@@ -163,6 +269,7 @@ void updateEntities(float dt)
                     en.z = nextZ;
             }
             break;
+        }
 
         case STATE_ATTACK:
             if (!playerVisibleToMonster)
@@ -186,6 +293,54 @@ void updateEntities(float dt)
                 }
             }
             break;
+
+        case STATE_RETREAT:
+        {
+            if (!nearestPost)
+            {
+                en.state = STATE_IDLE;
+                en.wanderTimer = 0.0f;
+                break;
+            }
+
+            // Empurra o inimigo para longe do poste mais próximo, sem entrar em paredes
+            float awayX = en.x - nearestPost->x;
+            float awayZ = en.z - nearestPost->z;
+            float len = std::sqrt(awayX * awayX + awayZ * awayZ);
+            if (len < 0.0001f)
+            {
+                // Direção aleatória se estiver exatamente em cima do poste
+                float ang = (float)(std::rand() % 360) * (3.14159265f / 180.0f);
+                awayX = std::cos(ang);
+                awayZ = std::sin(ang);
+                len = 1.0f;
+            }
+            awayX /= len;
+            awayZ /= len;
+
+            float moveStep = getEnemyWanderSpeed(en.typeEnum) * dt;
+            if (en.typeEnum == EnemyType::BOSS)
+                moveStep = getEnemySpeed(en.typeEnum) * dt;
+
+            float nextX = en.x + awayX * moveStep;
+            float nextZ = en.z + awayZ * moveStep;
+
+            bool canMoveX = isWalkable(nextX, en.z);
+            bool canMoveZ = isWalkable(en.x, nextZ);
+
+            if (canMoveX)
+                en.x = nextX;
+            if (canMoveZ)
+                en.z = nextZ;
+
+            // Quando estiver um pouco além da borda segura, volta para IDLE
+            if (dPost >= GameConfig::SAFE_ZONE_RADIUS * 1.1f)
+            {
+                en.state = STATE_IDLE;
+                en.wanderTimer = 0.0f;
+            }
+            break;
+        }
 
         default:
             break;

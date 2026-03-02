@@ -57,7 +57,7 @@ bool loadLevel(Level &lvl, const char *mapPath, float tileSize)
 
             if (c == 'J') enemyType = 0;      // Inimigo Tipo 1
             else if (c == 'T') enemyType = 1; // Inimigo Tipo 2 
-            else if (c == 'M') enemyType = 2; // Inimigo Tipo 3 
+            else if (c == 'M') enemyType = 2; // Inimigo Tipo 3 (boss principal)
             else if (c == 'G') enemyType = 3; // Inimigo Tipo 4
             else if (c == 'K') enemyType = 4; // Inimigo Tipo 5
 
@@ -65,6 +65,7 @@ bool loadLevel(Level &lvl, const char *mapPath, float tileSize)
             {
                 Enemy e;
                 e.type = enemyType;
+                e.typeEnum = enemyTypeFromInt(enemyType);
                 e.isAvatar = true;  // TODOS os inimigos são avatar 3D
 
                 e.x = wx;
@@ -81,6 +82,7 @@ bool loadLevel(Level &lvl, const char *mapPath, float tileSize)
                 e.animTimer = 0;
                 e.hurtTimer = 0.0f;
                 e.attackCooldown = 0.0f;
+                e.chaseMemoryTimer = 0.0f;
 
                 lvl.enemies.push_back(e);
             }

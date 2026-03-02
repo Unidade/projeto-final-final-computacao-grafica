@@ -14,3 +14,5 @@ bool menuMeltIsActive();
 
 void menuMeltRenderOverlay(int screenW, int screenH, float tempo);
 
+void levelTransitionRender(int screenW, int screenH, float tempo, float progress, int nextLevel, const RenderAssets &a);
+

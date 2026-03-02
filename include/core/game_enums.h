@@ -6,7 +6,8 @@ enum class GameState
     JOGANDO,
     PAUSADO,
     GAME_OVER,
-    VITORIA
+    VITORIA,
+    LEVEL_TRANSITION
 };
 
 enum class WeaponState
