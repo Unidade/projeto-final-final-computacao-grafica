@@ -4,9 +4,9 @@ Um jogo de tiro em primeira pessoa estilo Doom, desenvolvido com OpenGL (pipelin
 
 ## Demo
 
-https://github.com/user-attachments/assets/be16fdec-7d5c-429a-895a-5aeb3071632c
+<video src="https://rawcdn.githack.com/Unidade/projeto-final-computacao-grafica-doomlike/521511542854ae876d3ba2f9cac869a6c9ef5eba/demo-projeto-compgrafica.mp4" controls width="100%"></video>
 
-Vídeo local: `demo-projeto-compgrafica.mp4`
+> 💡 **Nota:** Se o vídeo não carregar acima, [clique aqui para assistir](./demo-projeto-compgrafica.mp4)
 
 ---
 
